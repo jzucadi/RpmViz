@@ -10,7 +10,7 @@ CONFIG <- list(
   center_mark_length = 0.1,
   center_mark_color = "lightgray",
   
-  # Define all speed layers in a structured way
+  # Define all speed layers
   speed_layers = list(
     list(name = "speeds1", data = speeds1, border_color = "light blue", canvas_lim = 1.0),
     list(name = "speeds2", data = speeds2, border_color = "yellow", canvas_lim = 1.16),
