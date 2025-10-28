@@ -1,19 +1,44 @@
-The script draws a dial with multiple concentric tracks, each representing a set of speeds (RPMs), using different colors for each layer.
-It visually marks the center of the dial and highlights boundaries like the dial’s edge and any mounting holes.
-Each speed layer (track) displays the corresponding RPM values as text, facing outward for readability.
+# Circlize Speed Chart Prototype
 
-Parameter Setup
-R
+A visual speed chart generator for variable-speed drill presses, specifically designed for machines like the Powermatic 1200 with a variable speed handle/crank mechanism.
+
+## Overview
+
+This R script creates a circular dial visualization that displays available spindle speeds (RPMs) across multiple pulley configurations. The chart mimics the appearance of traditional drill press speed charts, with concentric rings representing different belt-pulley combinations.
+
+Perfect for creating custom speed reference charts for your drill press control panel.
+
+## Features
+
+- **Multi-layered circular design**: Each concentric ring represents speeds achievable with a specific spindle pulley diameter
+- **Color-coded tracks**: Different colors (light blue, yellow, red, purple) distinguish between pulley configurations
+- **Outward-facing labels**: RPM values are oriented for easy reading around the dial
+- **Center reference marks**: Visual guides for dial center and mounting hole placement
+- **Customizable dimensions**: Adjust dial size, font size, and track heights to match your specific drill press
+
+## How It Works
+
+The script draws a dial with multiple concentric tracks, each representing a set of speeds (RPMs) achievable with different pulley combinations on your drill press. When you adjust the variable speed handle on a machine like the Powermatic 1200, you're changing the effective pulley ratio - this chart shows you what RPM you can expect at each setting.
+
+### Key Parameters
+
+```r
 font_size <- 15 #pt
 scale_height <- (dial_outer_edge_dia_in - dial_diameter_in) / length(spindle_pulley_diameters)
 gap_after = stop_angle - start_angle
 cell_padding <- c(0.00, 1.00, 0.00, 1.00)
-font_size: Sets text size for speed labels.
-scale_height: Calculates the height of the circular tracks based on dial dimensions and the number of pulleys.
-gap_after: Determines the angular gap between tracks.
-cell_padding: Sets padding between circular cells (tracks).
-Outermost Track (Highest Speeds)
-R
+```
+
+- **font_size**: Sets text size for speed labels
+- **scale_height**: Calculates the height of the circular tracks based on dial dimensions and the number of pulleys
+- **gap_after**: Determines the angular gap between tracks
+- **cell_padding**: Sets padding between circular cells (tracks)
+
+## Visualization Structure
+
+### Outermost Track (Highest Speeds)
+
+```r
 circos.par(clock.wise = TRUE, start.degree = start_angle, gap.after = gap_after, cell.padding = cell_padding)
 circos.initialize(factors = "speeds1", xlim = c(min(speeds1), max(speeds1)))
 circos.track(
@@ -23,23 +48,31 @@ circos.track(
 )
 circos.text(speeds1, rep(0.5, length(speeds1)), speeds1, facing = "outside", niceFacing = TRUE, cex = fontsize(font_size), font = 2, family = "serif")
 circos.clear()
-Initializes the circular plot with the outermost speed layer (speeds1).
-Draws a track with a blue border and places speed values outward around the ring.
-Center Mark and Boundaries
-R
+```
+
+Initializes the circular plot with the outermost speed layer (speeds1), draws a track with a blue border, and places speed values outward around the ring.
+
+### Center Mark and Boundaries
+
+```r
 lines(x = c(-0.1, 0.1), y = c(0, 0), fg = "lightgray")
 lines(x = c(0, 0), y = c(-0.1, 0.1), fg = "lightgray")
 symbols(c(0, 0), c(0, 0), circles = c(dial_diameter_in / 2, mounting_hole_dia_in / 2), fg = "lightgray", add = TRUE)
-Draws faint cross lines to mark the dial center.
-Draws circles for the dial edge and the mounting hole, helping visually anchor the dial.
-Additional Tracks (Lower Speeds)
+```
+
+Draws faint cross lines to mark the dial center and circles for the dial edge and mounting hole, helping visually anchor the dial.
+
+### Additional Tracks (Lower Speeds)
+
 For each subsequent speed layer (speeds2, speeds3, speeds4), the code:
-Uses par(new = TRUE) to overlay new tracks on the same plot.
-Expands the canvas limits (xy_canvas_lim) to fit the next ring.
-Initializes and draws colored tracks using circos.track.
-Places the speed values around each ring.
-Example for Second Layer:
-R
+- Uses `par(new = TRUE)` to overlay new tracks on the same plot
+- Expands the canvas limits (xy_canvas_lim) to fit the next ring
+- Initializes and draws colored tracks using `circos.track`
+- Places the speed values around each ring
+
+**Example for Second Layer:**
+
+```r
 xy_canvas_lim <- 1.16
 circos.par(canvas.xlim = c(-xy_canvas_lim, xy_canvas_lim), ...)
 circos.initialize(factors = "speeds2", xlim = c(min(speeds2), max(speeds2)))
@@ -52,9 +85,35 @@ circos.track(
   }
 )
 circos.clear()
+```
+
 Yellow, red, and purple borders are used for layers 2–4, respectively.
-Key Features & Techniques
-Multi-layered Dial: Each speed set is rendered as a distinct ring.
-Text Facing Outward: Ensures RPM values are readable from outside the dial.
-Custom Track Heights: Dynamically computed for proportional visuals.
-Layer Overlay: Uses par(new = TRUE) and increasing canvas limits to stack rings.
+
+## Use Case: Powermatic 1200 Drill Press
+
+The Powermatic 1200 features a variable speed handle that allows the operator to change spindle speeds without stopping the machine. This chart helps you:
+
+1. **Quickly reference available speeds** for different pulley positions
+2. **Optimize drilling operations** by selecting the correct RPM for your material and bit size
+3. **Create a professional speed chart** that can be mounted directly on your drill press
+
+Simply adjust your pulley belt position and use the variable speed handle to dial in the exact RPM shown on the corresponding ring.
+
+## Requirements
+
+- R (version 3.6+)
+- `circlize` package
+
+## Installation
+
+```r
+install.packages("circlize")
+```
+
+## License
+
+[Add your license here]
+
+## Contributing
+
+Contributions welcome! Feel free to submit issues or pull requests.
