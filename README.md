@@ -112,7 +112,7 @@ install.packages("circlize")
 
 ## License
 
-[Add your license here]
+This project is licensed under the [MIT License](LICENSE) - it's free and open source software.  You are free to use, modify, and distribute this project for any purpose, including commercial use. 
 
 ## Contributing
 
