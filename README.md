@@ -1,10 +1,39 @@
-# Circlize Speed Chart Prototype
+# Circlize Package Prototype
 
-A visual speed chart generator for variable-speed drill presses, specifically designed for machines like the Powermatic 1200 with a variable speed handle/crank mechanism.
+A collection of R scripts for creating industrial-style RPM visualizations using the circlize package.  This project provides both analog dial and digital display representations for spindle speed monitoring.
 
 <img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/e584f291-62ab-4744-9fb7-8192befc21e8" />
 
 ## Overview
+
+### circlize.r - Circular Speed Dial Visualization
+
+Creates a circular "speed dial" style chart using the circlize package, ideal for visualizing where the current RPM falls within the available speed range. 
+
+### rpm_display.r - Digital RPM Display
+
+A complementary script that displays actual RPM values in a digital format.  While the circular dial shows where you are on the speed range, the digital display shows the exact numerical RPM value.
+
+#### Features
+
+| Feature | Description |
+|---------|-------------|
+| 7-Segment Digital Display | Renders RPM values in a classic digital readout style |
+| Color-Coded Warnings | Green (safe), Yellow (warning), Red (danger) based on RPM thresholds |
+| RPM Calculation | Automatically calculates actual spindle RPM from pulley ratios |
+| Bar Graph Indicator | Visual bar showing where current RPM falls in the available range |
+| Dashboard Mode | Combined view with both digital readout and bar indicator |
+
+#### Key Functions
+
+- `calculate_rpm()` - Computes actual spindle RPM based on motor speed and pulley diameters
+- `render_digital_display()` - Shows a 7-segment style digital RPM readout
+- `render_rpm_bar()` - Displays a vertical bar graph of the current RPM level
+- `render_rpm_dashboard()` - Combined view with both displays
+
+## Integration
+
+Both scripts share the same machine specifications (pulley diameters, motor RPM) and are designed to work together. Use the circular dial for an at-a-glance view of the speed range position, and the digital display for precise numerical readings.
 
 This R script creates a circular dial visualization that displays available spindle speeds (RPMs) across multiple pulley configurations. The chart mimics the appearance of traditional drill press speed charts, with concentric rings representing different belt-pulley combinations.
 
@@ -110,6 +139,13 @@ Simply adjust your pulley belt position and use the variable speed handle to dia
 
 ```r
 install.packages("circlize")
+```
+
+## Usage
+
+```r
+source("circlize. r")
+source("rpm_display. r")
 ```
 
 ## License
