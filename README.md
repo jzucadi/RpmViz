@@ -2,6 +2,8 @@
 
 A visual speed chart generator for variable-speed drill presses, specifically designed for machines like the Powermatic 1200 with a variable speed handle/crank mechanism.
 
+<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/e584f291-62ab-4744-9fb7-8192befc21e8" />
+
 ## Overview
 
 This R script creates a circular dial visualization that displays available spindle speeds (RPMs) across multiple pulley configurations. The chart mimics the appearance of traditional drill press speed charts, with concentric rings representing different belt-pulley combinations.
