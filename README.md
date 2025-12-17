@@ -2,8 +2,12 @@
 
 A collection of R scripts for creating industrial-style RPM visualizations using the circlize package.  This project provides both analog dial and digital display representations for spindle speed monitoring.
 
-<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/e584f291-62ab-4744-9fb7-8192befc21e8" />
-![pm_1150_decal_old](https://github.com/user-attachments/assets/058910a9-de72-485a-a6b7-324a0d5d861f)
+| Feature | Description |
+|<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/e584f291-62ab-4744-9fb7-8192befc21e8" />|<img width="754" height="735" alt="Screenshot 2025-12-17 at 4 35 47 PM" src="https://github.com/user-attachments/assets/7c750f3f-144f-484b-8dfb-96762190582e" />
+|
+
+
+
 
 ## Overview
 
