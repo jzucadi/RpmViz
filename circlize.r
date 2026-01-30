@@ -141,43 +141,32 @@ draw_tick_marks <- function(speeds, config) {
 #' @param config Global configuration object
 draw_speed_zones <- function(speeds, config) {
   if (!config$show_speed_zones || is.null(config$current_material)) return()
-  
+
   material <- config$current_material
   if (!(material %in% names(config$optimal_ranges))) return()
-  
+
   optimal_range <- config$optimal_ranges[[material]]
-  
-  # Only draw if range overlaps with current speeds
-  if (optimal_range[1] <= max(speeds) && optimal_range[2] >= min(speeds)) {
-    # Clip range to actual speed range
-    zone_start <- max(optimal_range[1], min(speeds))
-    zone_end <- min(optimal_range[2], max(speeds))
-    
-    # Select color based on material
-    zone_color <- switch(
-      material,
-      wood = config$zone_params$wood_col,
-      metal = config$zone_params$metal_col,
-      plastic = config$zone_params$plastic_col,
-      "green"  # default
-    )
-    
-    # Draw highlighted zone
-    circos.rect(
-      xleft = zone_start,
-      xright = zone_end,
-      ybottom = 0, 
-      ytop = 1,
-      col = rgb(
-        col2rgb(zone_color)[1]/255,
-        col2rgb(zone_color)[2]/255,
-        col2rgb(zone_color)[3]/255,
-        config$zone_params$fill_alpha
-      ),
-      border = zone_color,
-      lwd = config$zone_params$border_lwd
-    )
-  }
+  speed_range <- c(min(speeds), max(speeds))
+
+  # Only draw if ranges overlap (using utility function)
+  if (!ranges_overlap(optimal_range, speed_range)) return()
+
+  # Clip optimal range to actual speed range (using utility function)
+  clipped <- clip_range(optimal_range, speed_range)
+
+  # Get zone color (using utility function)
+  zone_color <- get_zone_color(material)
+
+  # Draw highlighted zone with semi-transparent fill (using utility function)
+  circos.rect(
+    xleft = clipped[1],
+    xright = clipped[2],
+    ybottom = 0,
+    ytop = 1,
+    col = color_with_alpha(zone_color, config$zone_params$fill_alpha),
+    border = zone_color,
+    lwd = config$zone_params$border_lwd
+  )
 }
 
 #' Draw a circular speed track
@@ -185,24 +174,27 @@ draw_speed_zones <- function(speeds, config) {
 #' @param config Global configuration object
 #' @param is_first_layer Boolean indicating if this is the first layer
 draw_speed_track <- function(layer_config, config, is_first_layer = FALSE) {
+  # Common circos parameters (DRY - defined once)
+  common_params <- list(
+    clock.wise = TRUE,
+    start.degree = start_angle,
+    gap.after = config$gap_after,
+    cell.padding = config$cell_padding
+  )
+
   # Set up canvas parameters
   if (!is_first_layer) {
     par(new = TRUE)
-    circos.par(
-      canvas.xlim = c(-layer_config$canvas_lim, layer_config$canvas_lim),
-      canvas.ylim = c(-layer_config$canvas_lim, layer_config$canvas_lim),
-      clock.wise = TRUE,
-      start.degree = start_angle,
-      gap.after = config$gap_after,
-      cell.padding = config$cell_padding
-    )
+    # Add canvas limits for non-first layers
+    do.call(circos.par, c(
+      common_params,
+      list(
+        canvas.xlim = c(-layer_config$canvas_lim, layer_config$canvas_lim),
+        canvas.ylim = c(-layer_config$canvas_lim, layer_config$canvas_lim)
+      )
+    ))
   } else {
-    circos.par(
-      clock.wise = TRUE,
-      start.degree = start_angle,
-      gap.after = config$gap_after,
-      cell.padding = config$cell_padding
-    )
+    do.call(circos.par, common_params)
   }
   
   # Initialize and draw track
@@ -271,27 +263,28 @@ draw_center_marks <- function(config) {
 
 #' Draw RPM label in center of dial
 #' @param config Global configuration object
-draw_rpm_label <- function(config) {
+#' @param indicator_params Indicator parameters (defaults to INDICATOR_PARAMS)
+draw_rpm_label <- function(config, indicator_params = INDICATOR_PARAMS) {
   if (!config$show_rpm_label) return()
-  
-  # Main RPM label
+
+  # Main RPM label (using configurable parameters)
   text(
-    0, 0, 
-    "RPM", 
-    cex = 1.8, 
-    font = 2, 
-    family = "serif",
-    col = "black"
+    0, 0,
+    "RPM",
+    cex = indicator_params$rpm_label_cex,
+    font = indicator_params$rpm_label_font,
+    family = indicator_params$rpm_label_family,
+    col = indicator_params$rpm_label_color
   )
-  
+
   # Active pulley indicator
   active_layer <- config$speed_layers[[config$active_layer]]
   text(
-    0, -0.15, 
+    0, indicator_params$pulley_label_y_offset,
     active_layer$label,
-    cex = 0.9,
-    font = 1,
-    family = "serif",
+    cex = indicator_params$pulley_label_cex,
+    font = indicator_params$pulley_label_font,
+    family = indicator_params$rpm_label_family,
     col = active_layer$border_color
   )
 }
@@ -299,48 +292,47 @@ draw_rpm_label <- function(config) {
 #' Draw current RPM indicator arrow
 #' @param current_rpm Current machine speed
 #' @param config Global configuration object
-draw_rpm_indicator <- function(current_rpm, config) {
+#' @param indicator_params Indicator parameters (defaults to INDICATOR_PARAMS)
+draw_rpm_indicator <- function(current_rpm, config, indicator_params = INDICATOR_PARAMS) {
   if (is.null(current_rpm)) return()
-  
+
   # Get active layer data
   layer <- config$speed_layers[[config$active_layer]]
   speeds <- layer$data
-  
+
   # Check if current_rpm is within range
   if (current_rpm < min(speeds) || current_rpm > max(speeds)) {
     warning("Current RPM outside of active layer range")
     return()
   }
-  
-  # Calculate angle for current speed
+
+ # Calculate angle for current speed
   speed_fraction <- (current_rpm - min(speeds)) / (max(speeds) - min(speeds))
   angle_degrees <- start_angle - speed_fraction * (start_angle - stop_angle)
-  angle_rad <- angle_degrees * pi / 180
-  
-  # Calculate arrow endpoint
-  arrow_length <- dial_diameter_in / 2 * 0.85
-  arrow_x <- cos(angle_rad) * arrow_length
-  arrow_y <- sin(angle_rad) * arrow_length
-  
-  # Draw indicator arrow
+
+  # Calculate arrow endpoint (using utility function)
+  arrow_length <- dial_diameter_in / 2 * indicator_params$arrow_length_factor
+  arrow_pos <- polar_to_cartesian(angle_degrees, arrow_length)
+
+  # Draw indicator arrow (using configurable parameters)
   arrows(
-    0, 0, 
-    arrow_x, arrow_y,
-    col = "red", 
-    lwd = 4, 
-    length = 0.15,
-    angle = 20
+    0, 0,
+    arrow_pos$x, arrow_pos$y,
+    col = indicator_params$arrow_color,
+    lwd = indicator_params$arrow_lwd,
+    length = indicator_params$arrow_head_length,
+    angle = indicator_params$arrow_head_angle
   )
-  
-  # Draw current speed text near arrow tip
-  text_offset <- 1.15
+
+  # Draw current speed text near arrow tip (using configurable parameters)
+  text_pos <- polar_to_cartesian(angle_degrees, arrow_length * indicator_params$text_offset_factor)
   text(
-    arrow_x * text_offset, 
-    arrow_y * text_offset,
+    text_pos$x,
+    text_pos$y,
     paste0(current_rpm, " RPM"),
-    cex = 1.0,
-    font = 2,
-    col = "red"
+    cex = indicator_params$text_cex,
+    font = indicator_params$text_font,
+    col = indicator_params$arrow_color
   )
 }
 
@@ -348,7 +340,7 @@ draw_rpm_indicator <- function(current_rpm, config) {
 #' @param config Global configuration object
 draw_machine_info <- function(config) {
   if (!config$show_machine_info) return()
-  
+
   # Prepare legend text
   legend_text <- c(
     paste0("Motor: ", config$motor_hp, " HP @ ", config$motor_rpm, " RPM"),
@@ -356,31 +348,31 @@ draw_machine_info <- function(config) {
     "",
     "Speed Layers:"
   )
-  
-  # Add layer information
+
+  # Add layer information (using format_speed_range utility)
   for (i in seq_along(config$speed_layers)) {
     layer <- config$speed_layers[[i]]
-    speed_range <- paste0(min(layer$data), "-", max(layer$data), " RPM")
+    speed_range <- format_speed_range(min(layer$data), max(layer$data))
     legend_text <- c(legend_text, paste0("  ", layer$label, ": ", speed_range))
   }
-  
-  # Add material zone if active
+
+  # Add material zone if active (using format_speed_range utility)
   if (config$show_speed_zones && !is.null(config$current_material)) {
     zone <- config$optimal_ranges[[config$current_material]]
     legend_text <- c(
       legend_text,
       "",
-      paste0("Optimal for ", config$current_material, ": ", zone[1], "-", zone[2], " RPM")
+      paste0("Optimal for ", config$current_material, ": ", format_speed_range(zone[1], zone[2]))
     )
   }
-  
+
   # Draw legend
   legend(
-    "topright", 
+    "topright",
     legend = legend_text,
-    bty = "n", 
+    bty = "n",
     cex = 0.75,
-    text.font = c(2, 1, 1, 2, rep(1, length(config$speed_layers) + 
+    text.font = c(2, 1, 1, 2, rep(1, length(config$speed_layers) +
                    ifelse(config$show_speed_zones && !is.null(config$current_material), 2, 0)))
   )
 }

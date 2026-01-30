@@ -50,52 +50,54 @@ DISPLAY_CONFIG <- list(
 # DISPLAY RENDERING FUNCTIONS
 # ============================================================================
 
+# 7-segment digit definitions (which segments are on for each digit)
+# Segments: top, top-right, bottom-right, bottom, bottom-left, top-left, middle
+SEGMENT_PATTERNS <- list(
+  "0" = c(1, 1, 1, 1, 1, 1, 0),
+  "1" = c(0, 1, 1, 0, 0, 0, 0),
+  "2" = c(1, 1, 0, 1, 1, 0, 1),
+  "3" = c(1, 1, 1, 1, 0, 0, 1),
+  "4" = c(0, 1, 1, 0, 0, 1, 1),
+  "5" = c(1, 0, 1, 1, 0, 1, 1),
+  "6" = c(1, 0, 1, 1, 1, 1, 1),
+  "7" = c(1, 1, 1, 0, 0, 0, 0),
+  "8" = c(1, 1, 1, 1, 1, 1, 1),
+  "9" = c(1, 1, 1, 1, 0, 1, 1),
+  "-" = c(0, 0, 0, 0, 0, 0, 1)
+)
+
+# Segment positions (relative to digit center)
+SEGMENT_POSITIONS <- list(
+  list(x = c(-0.3, 0.3), y = c(0.5, 0.5)),      # top
+  list(x = c(0.35, 0.35), y = c(0.25, 0.45)),   # top-right
+  list(x = c(0.35, 0.35), y = c(-0.45, -0.05)), # bottom-right
+  list(x = c(-0.3, 0.3), y = c(-0.5, -0.5)),    # bottom
+  list(x = c(-0.35, -0.35), y = c(-0.45, -0.05)), # bottom-left
+  list(x = c(-0.35, -0.35), y = c(0.05, 0.45)), # top-left
+  list(x = c(-0.3, 0.3), y = c(0, 0))           # middle
+)
+
 #' Render a 7-segment style digit
 #' @param digit Single digit (0-9) or '-'
 #' @param x X position
 #' @param y Y position
 #' @param size Digit size
 #' @param color Digit color
-draw_segment_digit <- function(digit, x, y, size = 1, color = "red") {
-  # Segment definitions (which segments are on for each digit)
-  # Segments: top, top-right, bottom-right, bottom, bottom-left, top-left, middle
-  segments <- list(
-    "0" = c(1, 1, 1, 1, 1, 1, 0),
-    "1" = c(0, 1, 1, 0, 0, 0, 0),
-    "2" = c(1, 1, 0, 1, 1, 0, 1),
-    "3" = c(1, 1, 1, 1, 0, 0, 1),
-    "4" = c(0, 1, 1, 0, 0, 1, 1),
-    "5" = c(1, 0, 1, 1, 0, 1, 1),
-    "6" = c(1, 0, 1, 1, 1, 1, 1),
-    "7" = c(1, 1, 1, 0, 0, 0, 0),
-    "8" = c(1, 1, 1, 1, 1, 1, 1),
-    "9" = c(1, 1, 1, 1, 0, 1, 1),
-    "-" = c(0, 0, 0, 0, 0, 0, 1)
-  )
-  
-  # Segment positions (relative to center)
-  seg_pos <- list(
-    list(x = c(-0.3, 0.3), y = c(0. 5, 0.5)),   # top
-    list(x = c(0.35, 0.35), y = c(0.25, 0.45)), # top-right
-    list(x = c(0.35, 0.35), y = c(-0.45, -0.05)), # bottom-right
-    list(x = c(-0. 3, 0. 3), y = c(-0.5, -0.5)),  # bottom
-    list(x = c(-0.35, -0.35), y = c(-0.45, -0.05)), # bottom-left
-    list(x = c(-0.35, -0.35), y = c(0.05, 0.45)), # top-left
-    list(x = c(-0.3, 0.3), y = c(0, 0))         # middle
-  )
-  
+#' @param segment_params Segment parameters (defaults to SEGMENT_PARAMS)
+draw_segment_digit <- function(digit, x, y, size = 1, color = "red",
+                               segment_params = SEGMENT_PARAMS) {
   digit_char <- as.character(digit)
-  if (!(digit_char %in% names(segments))) return()
-  
-  active_segs <- segments[[digit_char]]
-  
+  if (!(digit_char %in% names(SEGMENT_PATTERNS))) return()
+
+  active_segs <- SEGMENT_PATTERNS[[digit_char]]
+
   for (i in seq_along(active_segs)) {
     if (active_segs[i] == 1) {
       lines(
-        x + seg_pos[[i]]$x * size,
-        y + seg_pos[[i]]$y * size,
+        x + SEGMENT_POSITIONS[[i]]$x * size,
+        y + SEGMENT_POSITIONS[[i]]$y * size,
         col = color,
-        lwd = 4
+        lwd = segment_params$segment_lwd
       )
     }
   }
@@ -104,33 +106,52 @@ draw_segment_digit <- function(digit, x, y, size = 1, color = "red") {
 #' Render complete RPM value as 7-segment display
 #' @param rpm RPM value to display
 #' @param config Display configuration
-draw_rpm_value <- function(rpm, config = DISPLAY_CONFIG) {
+#' @param segment_params Segment display parameters (defaults to SEGMENT_PARAMS)
+draw_rpm_value <- function(rpm, config = DISPLAY_CONFIG, segment_params = SEGMENT_PARAMS) {
   # Determine display color based on RPM (using shared helper)
   digit_color <- get_rpm_color(rpm, config)
 
   # Format RPM as 4-digit string
   rpm_str <- sprintf("%4d", rpm)
-  
-  # Draw each digit
+
+  # Draw each digit (using configurable positions and size)
   digits <- strsplit(rpm_str, "")[[1]]
-  x_positions <- c(-1.5, -0.5, 0.5, 1.5)
-  
+
   for (i in seq_along(digits)) {
     if (digits[i] != " ") {
-      draw_segment_digit(digits[i], x_positions[i], 0, size = 0.8, color = digit_color)
+      draw_segment_digit(
+        digits[i],
+        segment_params$digit_positions[i],
+        0,
+        size = segment_params$digit_size,
+        color = digit_color,
+        segment_params = segment_params
+      )
     }
   }
-  
-  # Draw "RPM" unit label
-  text(2. 5, 0, "RPM", col = config$label_color, cex = config$unit_cex, font = 2)
+
+  # Draw "RPM" unit label (using configurable position)
+  text(
+    segment_params$rpm_label_x,
+    segment_params$rpm_label_y,
+    "RPM",
+    col = config$label_color,
+    cex = config$unit_cex,
+    font = 2
+  )
 }
 
 #' Create the complete digital display
 #' @param current_rpm Current RPM to display
 #' @param active_pulley Active pulley index (1-4)
 #' @param config Display configuration
-render_digital_display <- function(current_rpm, active_pulley = 1, 
-                                   config = DISPLAY_CONFIG) {
+#' @param segment_params Segment display parameters (defaults to SEGMENT_PARAMS)
+render_digital_display <- function(current_rpm, active_pulley = 1,
+                                   config = DISPLAY_CONFIG,
+                                   segment_params = SEGMENT_PARAMS) {
+  # Validate pulley index (using shared validator)
+  validate_pulley_index(active_pulley)
+
   # Set up plot
   par(bg = config$bg_color, mar = c(1, 1, 2, 1))
   plot(
@@ -140,24 +161,31 @@ render_digital_display <- function(current_rpm, active_pulley = 1,
     xlab = "", ylab = "", axes = FALSE,
     main = ""
   )
-  
-  # Draw display border
+
+  # Draw display border (using configurable parameters)
+  margin <- segment_params$border_margin
   rect(
-    -config$width/2 + 0.1, -config$height/2 + 0.1,
-    config$width/2 - 0.1, config$height/2 - 0.1,
-    border = "gray40", lwd = 3
+    -config$width/2 + margin, -config$height/2 + margin,
+    config$width/2 - margin, config$height/2 - margin,
+    border = segment_params$border_color,
+    lwd = segment_params$border_lwd
   )
-  
+
   # Draw RPM value
-  draw_rpm_value(current_rpm, config)
-  
-  # Draw pulley indicator at bottom
-  pulley_text <- paste0("Pulley ", active_pulley, " (", 
+  draw_rpm_value(current_rpm, config, segment_params)
+
+  # Draw pulley indicator at bottom (using configurable position)
+  pulley_text <- paste0("Pulley ", active_pulley, " (",
                         spindle_pulley_diameters[active_pulley], '")')
-  text(0, -0.8, pulley_text, col = config$label_color, cex = 0.9)
-  
+  text(
+    0, segment_params$pulley_label_y,
+    pulley_text,
+    col = config$label_color,
+    cex = segment_params$pulley_label_cex
+  )
+
   # Draw title
-  title(main = "SPINDLE SPEED", col. main = config$label_color, font. main = 2)
+  title(main = "SPINDLE SPEED", col.main = config$label_color, font.main = 2)
 }
 
 #' Display RPM bar graph showing current position in range
@@ -168,10 +196,10 @@ render_digital_display <- function(current_rpm, active_pulley = 1,
 render_rpm_bar <- function(current_rpm, min_rpm = 200, max_rpm = 3500,
                            config = DISPLAY_CONFIG) {
   par(bg = config$bg_color, mar = c(3, 4, 2, 2))
-  
-  # Calculate percentage
+
+  # Calculate percentage (using clamp utility)
   pct <- (current_rpm - min_rpm) / (max_rpm - min_rpm)
-  pct <- max(0, min(1, pct))  # Clamp to 0-1
+  pct <- clamp(pct, 0, 1)
 
   # Determine color (using shared helper)
   bar_color <- get_rpm_color(current_rpm, config)
@@ -186,16 +214,16 @@ render_rpm_bar <- function(current_rpm, min_rpm = 200, max_rpm = 3500,
     xlab = "",
     axes = FALSE
   )
-  
+
   # Add scale
-  axis(2, at = c(0, 25, 50, 75, 100), 
+  axis(2, at = c(0, 25, 50, 75, 100),
        labels = round(seq(min_rpm, max_rpm, length.out = 5)),
        col = config$label_color, col.axis = config$label_color)
-  
+
   # Add current value label
-  text(0. 7, pct * 100 + 5, paste0(current_rpm, " RPM"), 
+  text(0.7, pct * 100 + 5, paste0(current_rpm, " RPM"),
        col = config$label_color, cex = 1.5, font = 2)
-  
+
   title(main = "RPM Level", col.main = config$label_color)
 }
 

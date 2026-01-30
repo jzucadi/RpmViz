@@ -72,6 +72,62 @@ MATERIAL_RANGES <- list(
 )
 
 # ============================================================================
+# INDICATOR PARAMETERS (for dial arrow and labels)
+# ============================================================================
+
+INDICATOR_PARAMS <- list(
+  # Arrow settings
+  arrow_length_factor = 0.85,    # Arrow length as fraction of dial radius
+  arrow_color = "red",
+  arrow_lwd = 4,
+  arrow_head_length = 0.15,
+  arrow_head_angle = 20,
+
+  # Text settings
+  text_offset_factor = 1.15,     # Distance of label from arrow tip
+  text_cex = 1.0,
+  text_font = 2,
+
+  # Center label settings
+  rpm_label_cex = 1.8,
+  rpm_label_font = 2,
+  rpm_label_family = "serif",
+  rpm_label_color = "black",
+
+  # Pulley indicator settings
+  pulley_label_cex = 0.9,
+  pulley_label_font = 1,
+  pulley_label_y_offset = -0.15
+)
+
+# ============================================================================
+# 7-SEGMENT DISPLAY PARAMETERS
+# ============================================================================
+
+SEGMENT_PARAMS <- list(
+  # Digit positioning
+  digit_positions = c(-1.5, -0.5, 0.5, 1.5),
+  digit_size = 0.8,
+  digit_spacing = 1.0,
+
+  # Segment line settings
+  segment_lwd = 4,
+
+  # RPM label position
+  rpm_label_x = 2.5,
+  rpm_label_y = 0,
+
+  # Pulley indicator position
+  pulley_label_y = -0.8,
+  pulley_label_cex = 0.9,
+
+  # Display border
+  border_color = "gray40",
+  border_lwd = 3,
+  border_margin = 0.1
+)
+
+# ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
@@ -166,4 +222,89 @@ validate_pulley_index <- function(index, machine_config = MACHINE_CONFIG) {
     stop(paste("Pulley index must be between 1 and", max_pulleys))
   }
   return(TRUE)
+}
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+#' Convert a color to RGBA with specified alpha
+#' @param color Color name or hex code
+#' @param alpha Alpha value (0-1)
+#' @return RGB color string with alpha
+color_with_alpha <- function(color, alpha = 0.5) {
+  rgb_vals <- col2rgb(color)
+  rgb(
+    rgb_vals[1] / 255,
+    rgb_vals[2] / 255,
+    rgb_vals[3] / 255,
+    alpha
+  )
+}
+
+#' Format a speed range as a string
+#' @param min_speed Minimum speed value
+#' @param max_speed Maximum speed value
+#' @param unit Unit string (default "RPM")
+#' @return Formatted string like "200-2000 RPM"
+format_speed_range <- function(min_speed, max_speed, unit = "RPM") {
+  paste0(min_speed, "-", max_speed, " ", unit)
+}
+
+#' Clamp a value between min and max bounds
+#' @param x Value to clamp
+#' @param min_val Minimum allowed value
+#' @param max_val Maximum allowed value
+#' @return Clamped value
+clamp <- function(x, min_val = 0, max_val = 1) {
+  max(min_val, min(max_val, x))
+}
+
+#' Convert degrees to radians
+#' @param degrees Angle in degrees
+#' @return Angle in radians
+degrees_to_radians <- function(degrees) {
+  degrees * pi / 180
+}
+
+#' Calculate position on a circle given angle and radius
+#' @param angle_degrees Angle in degrees
+#' @param radius Distance from center
+#' @return List with x and y coordinates
+polar_to_cartesian <- function(angle_degrees, radius) {
+  angle_rad <- degrees_to_radians(angle_degrees)
+  list(
+    x = cos(angle_rad) * radius,
+    y = sin(angle_rad) * radius
+  )
+}
+
+#' Get zone color for a material type
+#' @param material Material name (wood, metal, plastic)
+#' @param colors Color scheme (defaults to COLOR_SCHEME)
+#' @return Color string for the material zone
+get_zone_color <- function(material, colors = COLOR_SCHEME) {
+  if (material %in% names(colors$zone_colors)) {
+    return(colors$zone_colors[[material]])
+  }
+  return(colors$zone_colors$wood)  # default
+}
+
+#' Check if two ranges overlap
+#' @param range1 First range as c(min, max)
+#' @param range2 Second range as c(min, max)
+#' @return TRUE if ranges overlap
+ranges_overlap <- function(range1, range2) {
+  range1[1] <= range2[2] && range1[2] >= range2[1]
+}
+
+#' Clip a range to fit within bounds
+#' @param range Range to clip as c(min, max)
+#' @param bounds Bounds to clip to as c(min, max)
+#' @return Clipped range as c(min, max)
+clip_range <- function(range, bounds) {
+  c(
+    max(range[1], bounds[1]),
+    min(range[2], bounds[2])
+  )
 }
