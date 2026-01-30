@@ -5,44 +5,19 @@
 
 library(circlize)
 
-# ============================================================================
-# MACHINE SPECIFICATIONS (sync with circlize. r)
-# ============================================================================
-
-# Pulley configurations
-spindle_pulley_diameters <- c(2. 5, 3. 0, 3. 5, 4. 0)
-motor_pulley_diameter <- 2.0
-motor_rpm <- 1750
+# Load shared configuration (provides MACHINE_CONFIG, COLOR_SCHEME,
+# calculate_rpm, calculate_all_rpms, get_rpm_color, etc.)
+source("R/config.r")
 
 # ============================================================================
-# RPM CALCULATION FUNCTIONS
+# LOCAL REFERENCES (from shared config for backward compatibility)
 # ============================================================================
 
-#' Calculate actual spindle RPM based on pulley ratio and motor speed
-#' @param motor_rpm Motor RPM
-#' @param motor_pulley_dia Motor pulley diameter (inches)
-#' @param spindle_pulley_dia Spindle pulley diameter (inches)
-#' @param belt_slip_factor Optional efficiency loss (default 0.98 = 2% slip)
-#' @return Calculated spindle RPM
-calculate_rpm <- function(motor_rpm, motor_pulley_dia, spindle_pulley_dia, 
-                          belt_slip_factor = 0.98) {
-  pulley_ratio <- motor_pulley_dia / spindle_pulley_dia
-  actual_rpm <- motor_rpm * pulley_ratio * belt_slip_factor
-  return(round(actual_rpm))
-}
+spindle_pulley_diameters <- MACHINE_CONFIG$spindle_pulley_diameters
+motor_pulley_diameter <- MACHINE_CONFIG$motor_pulley_diameter
+motor_rpm <- MACHINE_CONFIG$motor_rpm
 
-#' Calculate all available RPMs for current pulley configuration
-#' @param motor_rpm Motor RPM
-#' @param motor_pulley_dia Motor pulley diameter
-#' @param spindle_pulleys Vector of spindle pulley diameters
-#' @return Named vector of RPMs
-calculate_all_rpms <- function(motor_rpm, motor_pulley_dia, spindle_pulleys) {
-  rpms <- sapply(spindle_pulleys, function(sp) {
-    calculate_rpm(motor_rpm, motor_pulley_dia, sp)
-  })
-  names(rpms) <- paste0("Pulley_", spindle_pulleys, "in")
-  return(rpms)
-}
+# Note: calculate_rpm() and calculate_all_rpms() are now provided by R/config.r
 
 # ============================================================================
 # DIGITAL DISPLAY CONFIGURATION
@@ -52,19 +27,19 @@ DISPLAY_CONFIG <- list(
   # Display dimensions
   width = 4,
   height = 2,
-  
-  # Colors
-  bg_color = "black",
-  digit_color = "red",
-  label_color = "white",
-  warning_color = "yellow",
-  danger_color = "red",
-  safe_color = "green",
-  
-  # Warning thresholds
-  max_safe_rpm = 3000,
-  max_warning_rpm = 3500,
-  
+
+  # Colors (from shared COLOR_SCHEME)
+  bg_color = COLOR_SCHEME$bg_color,
+  digit_color = COLOR_SCHEME$danger_color,
+  label_color = COLOR_SCHEME$label_color,
+  warning_color = COLOR_SCHEME$warning_color,
+  danger_color = COLOR_SCHEME$danger_color,
+  safe_color = COLOR_SCHEME$safe_color,
+
+  # Warning thresholds (from shared COLOR_SCHEME)
+  max_safe_rpm = COLOR_SCHEME$max_safe_rpm,
+  max_warning_rpm = COLOR_SCHEME$max_warning_rpm,
+
   # Font settings
   digit_cex = 5,
   label_cex = 1.2,
@@ -130,15 +105,9 @@ draw_segment_digit <- function(digit, x, y, size = 1, color = "red") {
 #' @param rpm RPM value to display
 #' @param config Display configuration
 draw_rpm_value <- function(rpm, config = DISPLAY_CONFIG) {
-  # Determine display color based on RPM
-  if (rpm > config$max_warning_rpm) {
-    digit_color <- config$danger_color
-  } else if (rpm > config$max_safe_rpm) {
-    digit_color <- config$warning_color
-  } else {
-    digit_color <- config$safe_color
-  }
-  
+  # Determine display color based on RPM (using shared helper)
+  digit_color <- get_rpm_color(rpm, config)
+
   # Format RPM as 4-digit string
   rpm_str <- sprintf("%4d", rpm)
   
@@ -203,16 +172,10 @@ render_rpm_bar <- function(current_rpm, min_rpm = 200, max_rpm = 3500,
   # Calculate percentage
   pct <- (current_rpm - min_rpm) / (max_rpm - min_rpm)
   pct <- max(0, min(1, pct))  # Clamp to 0-1
-  
-  # Determine color
-  if (current_rpm > config$max_warning_rpm) {
-    bar_color <- config$danger_color
-  } else if (current_rpm > config$max_safe_rpm) {
-    bar_color <- config$warning_color
-  } else {
-    bar_color <- config$safe_color
-  }
-  
+
+  # Determine color (using shared helper)
+  bar_color <- get_rpm_color(current_rpm, config)
+
   # Draw bar
   barplot(
     pct * 100,
@@ -257,8 +220,8 @@ render_rpm_dashboard <- function(current_rpm, active_pulley = 1) {
 # EXECUTE - Example Usage
 # ============================================================================
 
-# Calculate RPMs for all pulleys
-all_rpms <- calculate_all_rpms(motor_rpm, motor_pulley_diameter, spindle_pulley_diameters)
+# Calculate RPMs for all pulleys (using shared function with MACHINE_CONFIG)
+all_rpms <- calculate_all_rpms()
 print("Available RPMs by pulley:")
 print(all_rpms)
 

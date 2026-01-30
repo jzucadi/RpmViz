@@ -1,32 +1,43 @@
 # ============================================================================
-# MACHINE SPECIFICATIONS & DATA
+# CIRCULAR SPEED DIAL VISUALIZATION
+# Uses circlize package for industrial-style RPM dial display
 # ============================================================================
-# Replace these with your actual machine specifications
 
-# Machine dimensions (inches)
-dial_diameter_in <- 3.5
-dial_outer_edge_dia_in <- 4.5
-mounting_hole_dia_in <- 0.25
+library(circlize)
 
-# Dial angles
-start_angle <- 90
-stop_angle <- 450
+# Load shared configuration
+source("R/config.r")
 
-# Pulley configurations
-spindle_pulley_diameters <- c(2.5, 3.0, 3.5, 4.0)
-motor_hp <- 1.5
-motor_rpm <- 1750
+# ============================================================================
+# LOCAL REFERENCES (from shared config)
+# ============================================================================
 
-# Speed data for each pulley configuration
-# Replace with your actual calculated speeds
-speeds1 <- seq(200, 2000, by=200)
-speeds2 <- seq(250, 2500, by=250)
-speeds3 <- seq(300, 3000, by=300)
-speeds4 <- seq(350, 3500, by=350)
+# Machine dimensions (from MACHINE_CONFIG)
+dial_diameter_in <- MACHINE_CONFIG$dial_diameter_in
+dial_outer_edge_dia_in <- MACHINE_CONFIG$dial_outer_edge_dia_in
+mounting_hole_dia_in <- MACHINE_CONFIG$mounting_hole_dia_in
+
+# Dial angles (from MACHINE_CONFIG)
+start_angle <- MACHINE_CONFIG$start_angle
+stop_angle <- MACHINE_CONFIG$stop_angle
+
+# Pulley configurations (from MACHINE_CONFIG)
+spindle_pulley_diameters <- MACHINE_CONFIG$spindle_pulley_diameters
+motor_hp <- MACHINE_CONFIG$motor_hp
+motor_rpm <- MACHINE_CONFIG$motor_rpm
+
+# Speed data for each pulley configuration (calculated from pulley ratios)
+speeds1 <- generate_speed_sequence(1, num_steps = 10)
+speeds2 <- generate_speed_sequence(2, num_steps = 10)
+speeds3 <- generate_speed_sequence(3, num_steps = 10)
+speeds4 <- generate_speed_sequence(4, num_steps = 10)
 
 # ============================================================================
 # CONFIGURATION & PARAMETERS
 # ============================================================================
+
+# Canvas limits for each layer (innermost to outermost)
+CANVAS_LIMITS <- c(1.0, 1.16, 1.4, 1.75)
 
 CONFIG <- list(
   # Visual parameters
@@ -35,65 +46,33 @@ CONFIG <- list(
   gap_after = stop_angle - start_angle,
   cell_padding = c(0.00, 1.00, 0.00, 1.00),
   center_mark_length = 0.1,
-  center_mark_color = "lightgray",
-  
-  # Machine specifications
-  motor_hp = motor_hp,
-  motor_rpm = motor_rpm,
-  pulley_diameters = spindle_pulley_diameters,
-  
+  center_mark_color = COLOR_SCHEME$center_mark_color,
+
+  # Machine specifications (from shared config)
+  motor_hp = MACHINE_CONFIG$motor_hp,
+  motor_rpm = MACHINE_CONFIG$motor_rpm,
+  pulley_diameters = MACHINE_CONFIG$spindle_pulley_diameters,
+
   # Current operating parameters
   current_speed = NULL,           # Set to show indicator arrow
-  active_layer = 1,                # Which pulley is currently installed (1-4)
+  active_layer = 1,               # Which pulley is currently installed (1-4)
   show_tick_marks = TRUE,
   show_speed_zones = TRUE,
   show_rpm_label = TRUE,
   show_machine_info = TRUE,
-  
-  # Optimal speed ranges by material (RPM)
-  optimal_ranges = list(
-    wood = c(800, 2000),
-    metal = c(300, 800),
-    plastic = c(1000, 3000)
-  ),
+
+  # Optimal speed ranges by material (from shared config)
+  optimal_ranges = MATERIAL_RANGES,
   current_material = "wood",      # Which material zone to highlight
-  
-  # Define all speed layers
+
+  # Define all speed layers using DRY generator function
   speed_layers = list(
-    list(
-      name = "speeds1", 
-      data = speeds1, 
-      border_color = "light blue", 
-      canvas_lim = 1.0,
-      pulley_size = spindle_pulley_diameters[1],
-      label = paste0("Pulley ", spindle_pulley_diameters[1], '"')
-    ),
-    list(
-      name = "speeds2", 
-      data = speeds2, 
-      border_color = "yellow", 
-      canvas_lim = 1.16,
-      pulley_size = spindle_pulley_diameters[2],
-      label = paste0("Pulley ", spindle_pulley_diameters[2], '"')
-    ),
-    list(
-      name = "speeds3", 
-      data = speeds3, 
-      border_color = "red", 
-      canvas_lim = 1.4,
-      pulley_size = spindle_pulley_diameters[3],
-      label = paste0("Pulley ", spindle_pulley_diameters[3], '"')
-    ),
-    list(
-      name = "speeds4", 
-      data = speeds4, 
-      border_color = "purple", 
-      canvas_lim = 1.75,
-      pulley_size = spindle_pulley_diameters[4],
-      label = paste0("Pulley ", spindle_pulley_diameters[4], '"')
-    )
+    create_speed_layer(1, speeds1, COLOR_SCHEME$layer_colors[1], CANVAS_LIMITS[1], spindle_pulley_diameters[1]),
+    create_speed_layer(2, speeds2, COLOR_SCHEME$layer_colors[2], CANVAS_LIMITS[2], spindle_pulley_diameters[2]),
+    create_speed_layer(3, speeds3, COLOR_SCHEME$layer_colors[3], CANVAS_LIMITS[3], spindle_pulley_diameters[3]),
+    create_speed_layer(4, speeds4, COLOR_SCHEME$layer_colors[4], CANVAS_LIMITS[4], spindle_pulley_diameters[4])
   ),
-  
+
   # Text parameters
   text_params = list(
     facing = "outside",
@@ -101,7 +80,7 @@ CONFIG <- list(
     font = 2,
     family = "serif"
   ),
-  
+
   # Tick mark parameters
   tick_params = list(
     major_pch = "|",
@@ -112,14 +91,14 @@ CONFIG <- list(
     minor_cex = 0.5,
     minor_col = "gray60"
   ),
-  
-  # Speed zone highlighting
+
+  # Speed zone highlighting (colors from shared config)
   zone_params = list(
     fill_alpha = 0.2,
     border_lwd = 2,
-    wood_col = "green",
-    metal_col = "blue",
-    plastic_col = "orange"
+    wood_col = COLOR_SCHEME$zone_colors$wood,
+    metal_col = COLOR_SCHEME$zone_colors$metal,
+    plastic_col = COLOR_SCHEME$zone_colors$plastic
   )
 )
 
