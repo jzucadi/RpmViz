@@ -245,35 +245,56 @@ render_rpm_dashboard <- function(current_rpm, active_pulley = 1) {
 }
 
 # ============================================================================
-# EXECUTE - Example Usage
+# EXECUTE (only when running interactively)
 # ============================================================================
 
-# Calculate RPMs for all pulleys (using shared function with MACHINE_CONFIG)
-all_rpms <- calculate_all_rpms()
-print("Available RPMs by pulley:")
-print(all_rpms)
+if (interactive()) {
+  # Calculate RPMs for all pulleys (using shared function with MACHINE_CONFIG)
+  all_rpms <- calculate_all_rpms()
+  print("Available RPMs by pulley:")
+  print(all_rpms)
 
-# Example: Display current RPM
-current_rpm <- 1200
-active_pulley <- 2
+  # Example: Display current RPM
+  current_rpm <- 1200
+  active_pulley <- 2
 
-# Render the digital display
-render_digital_display(current_rpm, active_pulley)
+  # Render the digital display
+  render_digital_display(current_rpm, active_pulley)
+}
 
 # ============================================================================
 # USAGE EXAMPLES
 # ============================================================================
-
-# Example 1: Show current speed on digital display
+#
+# BASIC USAGE:
+# ------------
+# # Show current speed on digital display
 # render_digital_display(1500, active_pulley = 1)
-
-# Example 2: Show RPM bar graph
+#
+# # Show RPM bar graph
 # render_rpm_bar(2200)
-
-# Example 3: Full dashboard view
+#
+# # Full dashboard view (digital + bar)
 # render_rpm_dashboard(1800, active_pulley = 3)
-
-# Example 4: Calculate RPM from pulley sizes
-# my_rpm <- calculate_rpm(motor_rpm = 1750, motor_pulley_dia = 2.0, 
-#                         spindle_pulley_dia = 3.5)
+#
+# CALCULATING RPM:
+# ----------------
+# # Calculate RPM for a specific pulley configuration
+# my_rpm <- calculate_rpm(
+#   motor_rpm = 1750,
+#   motor_pulley_dia = 2.0,
+#   spindle_pulley_dia = 3.5
+# )
 # render_digital_display(my_rpm)
+#
+# # Get all available RPMs
+# all_rpms <- calculate_all_rpms()
+# print(all_rpms)
+#
+# CUSTOM DISPLAY CONFIG:
+# ----------------------
+# # Create custom display settings
+# my_display_config <- DISPLAY_CONFIG
+# my_display_config$max_safe_rpm <- 2500
+# my_display_config$safe_color <- "cyan"
+# render_digital_display(1800, config = my_display_config)

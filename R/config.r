@@ -308,3 +308,74 @@ clip_range <- function(range, bounds) {
     min(range[2], bounds[2])
   )
 }
+
+# ============================================================================
+# CONFIG FACTORY FUNCTIONS (for immutable config management)
+# ============================================================================
+
+#' Create a new machine config with custom values
+#' @param ... Named parameters to override defaults (e.g., motor_rpm = 1800)
+#' @param base_config Base configuration to copy from (defaults to MACHINE_CONFIG)
+#' @return New machine configuration list
+create_machine_config <- function(..., base_config = MACHINE_CONFIG) {
+  overrides <- list(...)
+  new_config <- base_config
+
+  for (name in names(overrides)) {
+    if (name %in% names(new_config)) {
+      new_config[[name]] <- overrides[[name]]
+    } else {
+      warning(paste("Unknown config parameter:", name))
+    }
+  }
+
+  return(new_config)
+}
+
+#' Create a new color scheme with custom values
+#' @param ... Named parameters to override defaults
+#' @param base_scheme Base scheme to copy from (defaults to COLOR_SCHEME)
+#' @return New color scheme list
+create_color_scheme <- function(..., base_scheme = COLOR_SCHEME) {
+  overrides <- list(...)
+  new_scheme <- base_scheme
+
+  for (name in names(overrides)) {
+    if (name %in% names(new_scheme)) {
+      new_scheme[[name]] <- overrides[[name]]
+    } else {
+      warning(paste("Unknown color scheme parameter:", name))
+    }
+  }
+
+  return(new_scheme)
+}
+
+#' Merge two configuration lists (second overrides first)
+#' @param base Base configuration list
+#' @param overrides Configuration list with values to override
+#' @return Merged configuration list
+merge_config <- function(base, overrides) {
+  result <- base
+  for (name in names(overrides)) {
+    if (is.list(overrides[[name]]) && name %in% names(base) && is.list(base[[name]])) {
+      # Recursively merge nested lists
+      result[[name]] <- merge_config(base[[name]], overrides[[name]])
+    } else {
+      result[[name]] <- overrides[[name]]
+    }
+  }
+  return(result)
+}
+
+#' Create a deep copy of a configuration (ensures immutability)
+#' @param config Configuration list to copy
+#' @return Deep copy of the configuration
+copy_config <- function(config) {
+  # In R, lists are copy-on-modify, but this makes the copy explicit
+  # and handles nested lists properly
+  if (is.list(config)) {
+    return(lapply(config, copy_config))
+  }
+  return(config)
+}

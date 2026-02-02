@@ -411,53 +411,118 @@ render_dial <- function(config) {
   draw_machine_info(config)
 }
 
-#' Update and re-render dial with new current speed
+#' Create a modified copy of config with updated values (immutable)
+#' @param config Configuration object to copy
+#' @param current_speed New current RPM value (optional)
+#' @param active_layer New active pulley layer 1-4 (optional)
+#' @param current_material New material type for optimal zone (optional)
+#' @return New config object with updated values
+update_config <- function(config,
+                          current_speed = NULL,
+                          active_layer = NULL,
+                          current_material = NULL) {
+  # Create a copy (immutable - don't modify original)
+  new_config <- config
+
+  # Update active layer if provided
+ if (!is.null(active_layer)) {
+    if (active_layer < 1 || active_layer > length(config$speed_layers)) {
+      warning("Invalid pulley number. Must be 1-", length(config$speed_layers))
+    } else {
+      new_config$active_layer <- active_layer
+    }
+  }
+
+  # Update material if provided
+  if (!is.null(current_material)) {
+    if (current_material %in% names(config$optimal_ranges)) {
+      new_config$current_material <- current_material
+    } else {
+      warning("Unknown material. Options: ", paste(names(config$optimal_ranges), collapse = ", "))
+    }
+  }
+
+  # Update current speed if provided
+  if (!is.null(current_speed)) {
+    new_config$current_speed <- current_speed
+  }
+
+  return(new_config)
+}
+
+#' Update config and re-render dial (convenience function)
+#' Returns the updated config for further use
+#' @param config Configuration object
+#' @param new_rpm New current RPM value
+#' @param new_pulley Optional: new active pulley layer (1-4)
+#' @param new_material Optional: new material type for optimal zone
+#' @return Updated configuration object
+update_and_render <- function(config, new_rpm, new_pulley = NULL, new_material = NULL) {
+  updated_config <- update_config(
+    config,
+    current_speed = new_rpm,
+    active_layer = new_pulley,
+    current_material = new_material
+  )
+  render_dial(updated_config)
+  return(invisible(updated_config))
+}
+
+#' Legacy wrapper for backward compatibility (uses global CONFIG)
 #' @param new_rpm New current RPM value
 #' @param new_pulley Optional: new active pulley layer (1-4)
 #' @param new_material Optional: new material type for optimal zone
 update_rpm_display <- function(new_rpm, new_pulley = NULL, new_material = NULL) {
-  if (!is.null(new_pulley)) {
-    if (new_pulley < 1 || new_pulley > length(CONFIG$speed_layers)) {
-      warning("Invalid pulley number. Must be 1-", length(CONFIG$speed_layers))
-    } else {
-      CONFIG$active_layer <<- new_pulley
-    }
-  }
-  
-  if (!is.null(new_material)) {
-    if (new_material %in% names(CONFIG$optimal_ranges)) {
-      CONFIG$current_material <<- new_material
-    } else {
-      warning("Unknown material. Options: ", paste(names(CONFIG$optimal_ranges), collapse = ", "))
-    }
-  }
-  
-  CONFIG$current_speed <<- new_rpm
+  # Update the global CONFIG and re-render
+  CONFIG <<- update_config(
+    CONFIG,
+    current_speed = new_rpm,
+    active_layer = new_pulley,
+    current_material = new_material
+  )
+  render_dial(CONFIG)
+  return(invisible(CONFIG))
+}
+
+# ============================================================================
+# EXECUTE (only when running interactively)
+# ============================================================================
+
+if (interactive()) {
+  # Render the dial (initial display without indicator)
   render_dial(CONFIG)
 }
 
 # ============================================================================
-# EXECUTE
-# ============================================================================
-
-# Render the dial (initial display without indicator)
-render_dial(CONFIG)
-
-# ============================================================================
 # USAGE EXAMPLES
 # ============================================================================
-
-# Example 1: Show current speed on active pulley
+#
+# IMMUTABLE APPROACH (recommended):
+# ---------------------------------
+# # Create a modified config without changing the original
+# my_config <- update_config(CONFIG, current_speed = 1200, active_layer = 2)
+# render_dial(my_config)
+#
+# # Chain multiple updates
+# my_config <- update_config(CONFIG, current_speed = 800)
+# my_config <- update_config(my_config, current_material = "metal")
+# render_dial(my_config)
+#
+# # Convenience function that updates and renders in one call
+# my_config <- update_and_render(CONFIG, new_rpm = 1500, new_pulley = 3)
+#
+# LEGACY APPROACH (modifies global CONFIG):
+# -----------------------------------------
+# # These functions modify the global CONFIG variable
 # update_rpm_display(1200)
-
-# Example 2: Change to different pulley and show speed
 # update_rpm_display(800, new_pulley = 2)
-
-# Example 3: Change material zone highlighting
 # update_rpm_display(500, new_material = "metal")
-
-# Example 4: Turn off optional features
-# CONFIG$show_tick_marks <- FALSE
-# CONFIG$show_speed_zones <- FALSE
-# CONFIG$show_machine_info <- FALSE
-# render_dial(CONFIG)
+#
+# MANUAL CONFIG CHANGES:
+# ----------------------
+# # Create a custom config
+# my_config <- CONFIG
+# my_config$show_tick_marks <- FALSE
+# my_config$show_speed_zones <- FALSE
+# my_config$current_speed <- 1000
+# render_dial(my_config)
