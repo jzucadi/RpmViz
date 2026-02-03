@@ -231,7 +231,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          install.packages(c("roxygen2", "devtools"))
+          install.packages(c("roxygen2", "devtools", "circlize"))
         shell: Rscript {0}
 
       - name: Check documentation is up to date
