@@ -153,6 +153,21 @@ get_rpm_color <- function(rpm, colors = COLOR_SCHEME) {
 #' @return Calculated spindle RPM (rounded)
 calculate_rpm <- function(motor_rpm, motor_pulley_dia, spindle_pulley_dia,
                           belt_slip_factor = MACHINE_CONFIG$belt_slip_factor) {
+  # Input validation
+  if (!is.numeric(motor_rpm) || length(motor_rpm) != 1 || motor_rpm <= 0) {
+    stop("motor_rpm must be a positive number")
+  }
+  if (!is.numeric(motor_pulley_dia) || length(motor_pulley_dia) != 1 || motor_pulley_dia <= 0) {
+    stop("motor_pulley_dia must be a positive number")
+  }
+  if (!is.numeric(spindle_pulley_dia) || length(spindle_pulley_dia) != 1 || spindle_pulley_dia <= 0) {
+    stop("spindle_pulley_dia must be a positive number")
+  }
+  if (!is.numeric(belt_slip_factor) || length(belt_slip_factor) != 1 ||
+      belt_slip_factor <= 0 || belt_slip_factor > 1) {
+    stop("belt_slip_factor must be a number between 0 and 1")
+  }
+
   pulley_ratio <- motor_pulley_dia / spindle_pulley_dia
   actual_rpm <- motor_rpm * pulley_ratio * belt_slip_factor
   return(round(actual_rpm))
@@ -182,6 +197,23 @@ calculate_all_rpms <- function(machine_config = MACHINE_CONFIG) {
 #' @param pulley_dia Pulley diameter for this layer
 #' @return List containing layer configuration
 create_speed_layer <- function(index, speeds, color, canvas_lim, pulley_dia) {
+  # Input validation
+  if (!is.numeric(index) || length(index) != 1 || index < 1) {
+    stop("index must be a positive integer")
+  }
+  if (!is.numeric(speeds) || length(speeds) < 1) {
+    stop("speeds must be a numeric vector with at least one element")
+  }
+  if (!is.character(color) || length(color) != 1) {
+    stop("color must be a single character string")
+  }
+  if (!is.numeric(canvas_lim) || length(canvas_lim) != 1 || canvas_lim <= 0) {
+    stop("canvas_lim must be a positive number")
+  }
+  if (!is.numeric(pulley_dia) || length(pulley_dia) != 1 || pulley_dia <= 0) {
+    stop("pulley_dia must be a positive number")
+  }
+
   list(
     name = paste0("speeds", index),
     data = speeds,
@@ -199,6 +231,18 @@ create_speed_layer <- function(index, speeds, color, canvas_lim, pulley_dia) {
 #' @return Vector of speed values
 generate_speed_sequence <- function(pulley_index, num_steps = 10,
                                     machine_config = MACHINE_CONFIG) {
+  # Input validation
+  if (!is.numeric(pulley_index) || length(pulley_index) != 1) {
+    stop("pulley_index must be a single numeric value")
+  }
+  if (!is.numeric(num_steps) || length(num_steps) != 1 || num_steps < 1) {
+    stop("num_steps must be a positive integer")
+  }
+  max_pulleys <- length(machine_config$spindle_pulley_diameters)
+  if (pulley_index < 1 || pulley_index > max_pulleys) {
+    stop(paste("pulley_index must be between 1 and", max_pulleys))
+  }
+
   pulley_dia <- machine_config$spindle_pulley_diameters[pulley_index]
   max_rpm <- calculate_rpm(
     machine_config$motor_rpm,
@@ -218,8 +262,165 @@ generate_speed_sequence <- function(pulley_index, num_steps = 10,
 #' @return TRUE if valid, stops with error if invalid
 validate_pulley_index <- function(index, machine_config = MACHINE_CONFIG) {
   max_pulleys <- length(machine_config$spindle_pulley_diameters)
-  if (is.null(index) || index < 1 || index > max_pulleys) {
-    stop(paste("Pulley index must be between 1 and", max_pulleys))
+  if (is.null(index)) {
+    stop("Pulley index cannot be NULL")
+  }
+  if (!is.numeric(index) || length(index) != 1) {
+    stop("Pulley index must be a single numeric value")
+  }
+  if (index < 1 || index > max_pulleys) {
+    stop(paste("Pulley index must be between 1 and", max_pulleys, "- got:", index))
+  }
+  return(TRUE)
+}
+
+# ============================================================================
+# INPUT VALIDATION FUNCTIONS
+# ============================================================================
+
+#' Validate that a value is a positive number
+#' @param value Value to validate
+#' @param name Name of the parameter (for error messages)
+#' @param allow_zero Whether zero is allowed (default FALSE)
+#' @return TRUE if valid, stops with error if invalid
+validate_positive_number <- function(value, name = "value", allow_zero = FALSE) {
+  if (is.null(value)) {
+    stop(paste(name, "cannot be NULL"))
+  }
+  if (!is.numeric(value) || length(value) != 1) {
+    stop(paste(name, "must be a single numeric value"))
+  }
+  if (is.na(value) || is.nan(value) || is.infinite(value)) {
+    stop(paste(name, "must be a finite number, got:", value))
+  }
+  if (allow_zero) {
+    if (value < 0) {
+      stop(paste(name, "must be >= 0, got:", value))
+    }
+  } else {
+    if (value <= 0) {
+      stop(paste(name, "must be > 0, got:", value))
+    }
+  }
+  return(TRUE)
+}
+
+#' Validate that a value is within a specified range
+#' @param value Value to validate
+#' @param min_val Minimum allowed value
+#' @param max_val Maximum allowed value
+#' @param name Name of the parameter (for error messages)
+#' @return TRUE if valid, stops with error if invalid
+validate_range <- function(value, min_val, max_val, name = "value") {
+  validate_positive_number(value, name, allow_zero = TRUE)
+  if (value < min_val || value > max_val) {
+    stop(paste(name, "must be between", min_val, "and", max_val, "- got:", value))
+  }
+  return(TRUE)
+}
+
+#' Validate RPM value
+#' @param rpm RPM value to validate
+#' @param max_rpm Maximum allowed RPM (default 10000)
+#' @return TRUE if valid, stops with error if invalid
+validate_rpm <- function(rpm, max_rpm = 10000) {
+  if (is.null(rpm)) {
+    stop("RPM value cannot be NULL")
+  }
+  if (!is.numeric(rpm) || length(rpm) != 1) {
+    stop("RPM must be a single numeric value")
+  }
+  if (is.na(rpm) || is.nan(rpm) || is.infinite(rpm)) {
+    stop(paste("RPM must be a finite number, got:", rpm))
+  }
+  if (rpm < 0) {
+    stop(paste("RPM cannot be negative, got:", rpm))
+  }
+  if (rpm > max_rpm) {
+    warning(paste("RPM value", rpm, "exceeds typical maximum of", max_rpm))
+  }
+  return(TRUE)
+}
+
+#' Validate material type
+#' @param material Material name to validate
+#' @param valid_materials List of valid material names (defaults to MATERIAL_RANGES keys)
+#' @return TRUE if valid, stops with error if invalid
+validate_material <- function(material, valid_materials = names(MATERIAL_RANGES)) {
+  if (is.null(material)) {
+    return(TRUE)  # NULL is allowed (means no material zone)
+  }
+  if (!is.character(material) || length(material) != 1) {
+    stop("Material must be a single character string")
+  }
+  if (!(material %in% valid_materials)) {
+    stop(paste("Unknown material:", material,
+               "- valid options:", paste(valid_materials, collapse = ", ")))
+  }
+  return(TRUE)
+}
+
+#' Validate color value
+#' @param color Color value to validate
+#' @param name Name of the parameter (for error messages)
+#' @return TRUE if valid, stops with error if invalid
+validate_color <- function(color, name = "color") {
+  if (is.null(color)) {
+    stop(paste(name, "cannot be NULL"))
+  }
+  if (!is.character(color) || length(color) != 1) {
+    stop(paste(name, "must be a single character string"))
+  }
+  # Try to convert color - will error if invalid
+  tryCatch({
+    col2rgb(color)
+  }, error = function(e) {
+    stop(paste("Invalid color for", name, ":", color))
+  })
+  return(TRUE)
+}
+
+#' Validate a numeric vector
+#' @param vec Vector to validate
+#' @param name Name of the parameter (for error messages)
+#' @param min_length Minimum required length (default 1)
+#' @param require_positive Whether all values must be positive (default FALSE)
+#' @return TRUE if valid, stops with error if invalid
+validate_numeric_vector <- function(vec, name = "vector", min_length = 1, require_positive = FALSE) {
+  if (is.null(vec)) {
+    stop(paste(name, "cannot be NULL"))
+  }
+  if (!is.numeric(vec)) {
+    stop(paste(name, "must be numeric"))
+  }
+  if (length(vec) < min_length) {
+    stop(paste(name, "must have at least", min_length, "element(s)"))
+  }
+  if (any(is.na(vec)) || any(is.nan(vec)) || any(is.infinite(vec))) {
+    stop(paste(name, "contains invalid values (NA, NaN, or Inf)"))
+  }
+  if (require_positive && any(vec <= 0)) {
+    stop(paste(name, "must contain only positive values"))
+  }
+  return(TRUE)
+}
+
+#' Validate a configuration list has required fields
+#' @param config Configuration list to validate
+#' @param required_fields Character vector of required field names
+#' @param config_name Name of the config (for error messages)
+#' @return TRUE if valid, stops with error if invalid
+validate_config_fields <- function(config, required_fields, config_name = "config") {
+ if (is.null(config)) {
+    stop(paste(config_name, "cannot be NULL"))
+  }
+  if (!is.list(config)) {
+    stop(paste(config_name, "must be a list"))
+  }
+  missing_fields <- required_fields[!(required_fields %in% names(config))]
+  if (length(missing_fields) > 0) {
+    stop(paste(config_name, "is missing required fields:",
+               paste(missing_fields, collapse = ", ")))
   }
   return(TRUE)
 }

@@ -384,9 +384,24 @@ draw_machine_info <- function(config) {
 #' Render complete dial with all speed tracks and enhancements
 #' @param config Configuration object containing all parameters
 render_dial <- function(config) {
+  # Validate config object
+  if (is.null(config) || !is.list(config)) {
+    stop("config must be a non-null list")
+  }
+
+  required_fields <- c("speed_layers", "gap_after", "cell_padding",
+                       "center_mark_length", "center_mark_color",
+                       "show_tick_marks", "show_speed_zones", "show_rpm_label",
+                       "show_machine_info", "active_layer")
+  validate_config_fields(config, required_fields, "dial config")
+
+  if (length(config$speed_layers) == 0) {
+    stop("config$speed_layers must contain at least one layer")
+  }
+
   # Clear any existing circos plots
   circos.clear()
-  
+
   # Draw all speed tracks
   for (i in seq_along(config$speed_layers)) {
     draw_speed_track(
@@ -394,19 +409,19 @@ render_dial <- function(config) {
       config = config,
       is_first_layer = (i == 1)
     )
-    
+
     # Draw center elements after first layer
     if (i == 1) {
       draw_center_marks(config)
       draw_rpm_label(config)
     }
   }
-  
+
   # Draw current speed indicator (if set)
   if (!is.null(config$current_speed)) {
     draw_rpm_indicator(config$current_speed, config)
   }
-  
+
   # Draw machine information legend
   draw_machine_info(config)
 }
@@ -421,29 +436,36 @@ update_config <- function(config,
                           current_speed = NULL,
                           active_layer = NULL,
                           current_material = NULL) {
+  # Validate config object
+  if (is.null(config) || !is.list(config)) {
+    stop("config must be a non-null list")
+  }
+  validate_config_fields(config, c("speed_layers", "optimal_ranges"), "config")
+
   # Create a copy (immutable - don't modify original)
   new_config <- config
 
-  # Update active layer if provided
- if (!is.null(active_layer)) {
+  # Update active layer if provided (with validation)
+  if (!is.null(active_layer)) {
+    if (!is.numeric(active_layer) || length(active_layer) != 1) {
+      stop("active_layer must be a single numeric value")
+    }
     if (active_layer < 1 || active_layer > length(config$speed_layers)) {
-      warning("Invalid pulley number. Must be 1-", length(config$speed_layers))
-    } else {
-      new_config$active_layer <- active_layer
+      stop(paste("active_layer must be between 1 and", length(config$speed_layers),
+                 "- got:", active_layer))
     }
+    new_config$active_layer <- active_layer
   }
 
-  # Update material if provided
+  # Update material if provided (with validation)
   if (!is.null(current_material)) {
-    if (current_material %in% names(config$optimal_ranges)) {
-      new_config$current_material <- current_material
-    } else {
-      warning("Unknown material. Options: ", paste(names(config$optimal_ranges), collapse = ", "))
-    }
+    validate_material(current_material, names(config$optimal_ranges))
+    new_config$current_material <- current_material
   }
 
-  # Update current speed if provided
+  # Update current speed if provided (with validation)
   if (!is.null(current_speed)) {
+    validate_rpm(current_speed)
     new_config$current_speed <- current_speed
   }
 

@@ -86,8 +86,27 @@ SEGMENT_POSITIONS <- list(
 #' @param segment_params Segment parameters (defaults to SEGMENT_PARAMS)
 draw_segment_digit <- function(digit, x, y, size = 1, color = "red",
                                segment_params = SEGMENT_PARAMS) {
+  # Validate inputs
+  if (is.null(digit)) {
+    warning("digit cannot be NULL, skipping")
+    return(invisible(NULL))
+  }
+  if (!is.numeric(x) || length(x) != 1) {
+    stop("x must be a single numeric value")
+  }
+  if (!is.numeric(y) || length(y) != 1) {
+    stop("y must be a single numeric value")
+  }
+  if (!is.numeric(size) || length(size) != 1 || size <= 0) {
+    stop("size must be a positive number")
+  }
+
   digit_char <- as.character(digit)
-  if (!(digit_char %in% names(SEGMENT_PATTERNS))) return()
+  if (!(digit_char %in% names(SEGMENT_PATTERNS))) {
+    warning(paste("Invalid digit:", digit_char,
+                  "- valid characters: 0-9 and '-'. Skipping."))
+    return(invisible(NULL))
+  }
 
   active_segs <- SEGMENT_PATTERNS[[digit_char]]
 
@@ -108,6 +127,11 @@ draw_segment_digit <- function(digit, x, y, size = 1, color = "red",
 #' @param config Display configuration
 #' @param segment_params Segment display parameters (defaults to SEGMENT_PARAMS)
 draw_rpm_value <- function(rpm, config = DISPLAY_CONFIG, segment_params = SEGMENT_PARAMS) {
+  # Validate inputs
+  validate_rpm(rpm)
+  validate_config_fields(config, c("label_color", "unit_cex", "max_safe_rpm", "max_warning_rpm"),
+                         "display config")
+
   # Determine display color based on RPM (using shared helper)
   digit_color <- get_rpm_color(rpm, config)
 
@@ -149,8 +173,14 @@ draw_rpm_value <- function(rpm, config = DISPLAY_CONFIG, segment_params = SEGMEN
 render_digital_display <- function(current_rpm, active_pulley = 1,
                                    config = DISPLAY_CONFIG,
                                    segment_params = SEGMENT_PARAMS) {
-  # Validate pulley index (using shared validator)
+  # Validate inputs
+  validate_rpm(current_rpm)
   validate_pulley_index(active_pulley)
+  validate_config_fields(config, c("bg_color", "width", "height", "label_color"),
+                         "display config")
+  validate_config_fields(segment_params, c("border_margin", "border_color", "border_lwd",
+                                           "pulley_label_y", "pulley_label_cex"),
+                         "segment params")
 
   # Set up plot
   par(bg = config$bg_color, mar = c(1, 1, 2, 1))
@@ -195,6 +225,15 @@ render_digital_display <- function(current_rpm, active_pulley = 1,
 #' @param config Display configuration
 render_rpm_bar <- function(current_rpm, min_rpm = 200, max_rpm = 3500,
                            config = DISPLAY_CONFIG) {
+  # Validate inputs
+  validate_rpm(current_rpm)
+  validate_positive_number(min_rpm, "min_rpm", allow_zero = TRUE)
+  validate_positive_number(max_rpm, "max_rpm")
+  if (min_rpm >= max_rpm) {
+    stop(paste("min_rpm must be less than max_rpm - got min:", min_rpm, "max:", max_rpm))
+  }
+  validate_config_fields(config, c("bg_color", "label_color"), "display config")
+
   par(bg = config$bg_color, mar = c(3, 4, 2, 2))
 
   # Calculate percentage (using clamp utility)
@@ -231,15 +270,19 @@ render_rpm_bar <- function(current_rpm, min_rpm = 200, max_rpm = 3500,
 #' @param current_rpm Current RPM to display
 #' @param active_pulley Active pulley (1-4)
 render_rpm_dashboard <- function(current_rpm, active_pulley = 1) {
+  # Validate inputs (detailed validation happens in sub-functions)
+  validate_rpm(current_rpm)
+  validate_pulley_index(active_pulley)
+
   # Set up 2-panel layout
   par(mfrow = c(1, 2))
-  
+
   # Panel 1: Digital display
   render_digital_display(current_rpm, active_pulley)
-  
+
   # Panel 2: Bar indicator
   render_rpm_bar(current_rpm)
-  
+
   # Reset layout
   par(mfrow = c(1, 1))
 }
