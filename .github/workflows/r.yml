@@ -1,40 +1,313 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-#
-# See https://github.com/r-lib/actions/tree/master/examples#readme for
-# additional example workflows available for the R community.
+# Comprehensive R package CI/CD workflow
+# Runs tests, checks, and coverage on multiple platforms and R versions
 
-name: R
+name: R Package CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:  # Allow manual triggering
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    runs-on: macos-latest
+  # ===========================================================================
+  # R CMD CHECK - Core package validation
+  # ===========================================================================
+  R-CMD-check:
+    runs-on: ${{ matrix.config.os }}
+    name: R-CMD-check (${{ matrix.config.os }}, R ${{ matrix.config.r }})
+
     strategy:
+      fail-fast: false
       matrix:
-        r-version: ['3.6.3', '4.1.1']
+        config:
+          - {os: macos-latest, r: 'release'}
+          - {os: windows-latest, r: 'release'}
+          - {os: ubuntu-latest, r: 'release'}
+          - {os: ubuntu-latest, r: 'devel', http-user-agent: 'release'}
+          - {os: ubuntu-latest, r: 'oldrel-1'}
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
 
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up R ${{ matrix.r-version }}
-        uses: r-lib/actions/setup-r@f57f1301a053485946083d7a45022b278929a78a
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+
+      - name: Setup R ${{ matrix.config.r }}
+        uses: r-lib/actions/setup-r@v2
         with:
-          r-version: ${{ matrix.r-version }}
+          r-version: ${{ matrix.config.r }}
+          http-user-agent: ${{ matrix.config.http-user-agent }}
+          use-public-rspm: true
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
+
+      - name: Setup R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      - name: Run R CMD check
+        uses: r-lib/actions/check-r-package@v2
+        with:
+          upload-snapshots: true
+          args: 'c("--no-manual", "--as-cran")'
+
+  # ===========================================================================
+  # UNIT TESTS - Run testthat tests
+  # ===========================================================================
+  test:
+    runs-on: ubuntu-latest
+    name: Unit Tests
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
+
+      - name: Setup R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::testthat, any::devtools
+          needs: test
+
+      - name: Run tests
+        run: |
+          devtools::load_all()
+          testthat::test_dir("tests/testthat", reporter = "summary")
+        shell: Rscript {0}
+
+      - name: Run tests with detailed output
+        run: |
+          devtools::load_all()
+          results <- testthat::test_dir("tests/testthat", reporter = "check")
+          if (any(as.data.frame(results)$failed > 0)) {
+            stop("Tests failed!")
+          }
+        shell: Rscript {0}
+
+  # ===========================================================================
+  # CODE COVERAGE - Generate and upload coverage report
+  # ===========================================================================
+  coverage:
+    runs-on: ubuntu-latest
+    name: Code Coverage
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
+
+      - name: Setup R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::covr, any::devtools
+          needs: coverage
+
+      - name: Generate coverage report
+        run: |
+          devtools::load_all()
+          cov <- covr::package_coverage(
+            path = ".",
+            type = "tests",
+            quiet = FALSE
+          )
+          print(cov)
+          covr::report(cov, file = "coverage-report.html")
+        shell: Rscript {0}
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage-report.html
+
+      - name: Coverage summary
+        run: |
+          devtools::load_all()
+          cov <- covr::package_coverage(path = ".", type = "tests")
+          pct <- covr::percent_coverage(cov)
+          cat(sprintf("Total coverage: %.1f%%\n", pct))
+          if (pct < 60) {
+            warning("Coverage is below 60%!")
+          }
+        shell: Rscript {0}
+
+  # ===========================================================================
+  # LINT - Code style checking
+  # ===========================================================================
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install lintr
+        run: install.packages("lintr")
+        shell: Rscript {0}
+
+      - name: Lint R files
+        run: |
+          library(lintr)
+          lints <- lint_dir(
+            path = "R",
+            linters = linters_with_defaults(
+              line_length_linter(120),
+              object_name_linter(styles = c("snake_case", "SNAKE_CASE", "camelCase"))
+            )
+          )
+          print(lints)
+          if (length(lints) > 0) {
+            cat(sprintf("\nFound %d lint issues\n", length(lints)))
+          }
+        shell: Rscript {0}
+
+      - name: Lint test files
+        run: |
+          library(lintr)
+          lints <- lint_dir(
+            path = "tests",
+            linters = linters_with_defaults(
+              line_length_linter(120)
+            )
+          )
+          print(lints)
+        shell: Rscript {0}
+
+  # ===========================================================================
+  # DOCUMENTATION - Check roxygen documentation
+  # ===========================================================================
+  docs:
+    runs-on: ubuntu-latest
+    name: Documentation
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
       - name: Install dependencies
         run: |
-          install.packages(c("remotes", "rcmdcheck"))
-          remotes::install_deps(dependencies = TRUE)
+          install.packages(c("roxygen2", "devtools"))
         shell: Rscript {0}
-      - name: Check
-        run: rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")
+
+      - name: Check documentation is up to date
+        run: |
+          roxygen2::roxygenize()
+          if (length(system("git diff --name-only", intern = TRUE)) > 0) {
+            cat("Documentation needs updating. Run roxygen2::roxygenize() locally.\n")
+            system("git diff --stat")
+          }
+        shell: Rscript {0}
+
+  # ===========================================================================
+  # INSTALL TEST - Verify package can be installed
+  # ===========================================================================
+  install:
+    runs-on: ${{ matrix.os }}
+    name: Install Test (${{ matrix.os }})
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
+
+      - name: Install package dependencies
+        run: |
+          install.packages(c("remotes", "circlize"))
+        shell: Rscript {0}
+
+      - name: Install package
+        run: |
+          remotes::install_local(".", dependencies = TRUE, force = TRUE)
+        shell: Rscript {0}
+
+      - name: Verify package loads
+        run: |
+          library(rpmviz)
+          cat("Package loaded successfully!\n")
+          cat("Available functions:\n")
+          print(ls("package:rpmviz"))
+        shell: Rscript {0}
+
+      - name: Run smoke test
+        run: |
+          library(rpmviz)
+          # Test core calculations
+          rpm <- calculate_rpm(1750, 2.0, 3.5)
+          stopifnot(rpm > 0)
+          cat(sprintf("calculate_rpm() works: %d RPM\n", rpm))
+
+          # Test all RPMs
+          all_rpms <- calculate_all_rpms()
+          stopifnot(length(all_rpms) == 4)
+          cat("calculate_all_rpms() works\n")
+
+          # Test color function
+          color <- get_rpm_color(1500)
+          stopifnot(is.character(color))
+          cat(sprintf("get_rpm_color() works: %s\n", color))
+
+          # Test validation
+          stopifnot(validate_rpm(1000))
+          cat("validate_rpm() works\n")
+
+          cat("\nAll smoke tests passed!\n")
         shell: Rscript {0}
