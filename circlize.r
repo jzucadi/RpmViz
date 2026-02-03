@@ -27,17 +27,17 @@ motor_hp <- MACHINE_CONFIG$motor_hp
 motor_rpm <- MACHINE_CONFIG$motor_rpm
 
 # Speed data for each pulley configuration (calculated from pulley ratios)
-speeds1 <- generate_speed_sequence(1, num_steps = 10)
-speeds2 <- generate_speed_sequence(2, num_steps = 10)
-speeds3 <- generate_speed_sequence(3, num_steps = 10)
-speeds4 <- generate_speed_sequence(4, num_steps = 10)
+speeds1 <- generate_speed_sequence(1, num_steps = DIAL_PARAMS$num_speed_steps)
+speeds2 <- generate_speed_sequence(2, num_steps = DIAL_PARAMS$num_speed_steps)
+speeds3 <- generate_speed_sequence(3, num_steps = DIAL_PARAMS$num_speed_steps)
+speeds4 <- generate_speed_sequence(4, num_steps = DIAL_PARAMS$num_speed_steps)
 
 # ============================================================================
 # CONFIGURATION & PARAMETERS
 # ============================================================================
 
-# Canvas limits for each layer (innermost to outermost)
-CANVAS_LIMITS <- c(1.0, 1.16, 1.4, 1.75)
+# Canvas limits for each layer (from shared config)
+CANVAS_LIMITS <- DIAL_PARAMS$canvas_limits
 
 CONFIG <- list(
   # Visual parameters
@@ -109,29 +109,32 @@ CONFIG <- list(
 #' Draw tick marks on the speed track
 #' @param speeds Vector of speed values
 #' @param config Global configuration object
-draw_tick_marks <- function(speeds, config) {
+#' @param dial_params Dial visual parameters (defaults to DIAL_PARAMS)
+draw_tick_marks <- function(speeds, config, dial_params = DIAL_PARAMS) {
   if (!config$show_tick_marks) return()
-  
+
+  tick_y <- dial_params$tick_y_position
+
   # Major ticks at labeled speeds
   circos.points(
-    speeds, 
-    rep(0.5, length(speeds)), 
-    pch = config$tick_params$major_pch, 
+    speeds,
+    rep(tick_y, length(speeds)),
+    pch = config$tick_params$major_pch,
     cex = config$tick_params$major_cex,
     col = config$tick_params$major_col
   )
-  
+
   # Minor ticks between major ones
   all_ticks <- seq(
-    min(speeds), 
-    max(speeds), 
+    min(speeds),
+    max(speeds),
     length.out = config$tick_params$minor_divisions
   )
   circos.points(
-    all_ticks, 
-    rep(0.5, length(all_ticks)), 
-    pch = config$tick_params$minor_pch, 
-    cex = config$tick_params$minor_cex, 
+    all_ticks,
+    rep(tick_y, length(all_ticks)),
+    pch = config$tick_params$minor_pch,
+    cex = config$tick_params$minor_cex,
     col = config$tick_params$minor_col
   )
 }
@@ -207,6 +210,9 @@ draw_speed_track <- function(layer_config, config, is_first_layer = FALSE) {
   # Pre-compute font size once
   font_cex <- fontsize(config$font_size)
   
+  # Get label Y position from dial params
+  label_y <- DIAL_PARAMS$label_y_position
+
   circos.track(
     ylim = c(0, 1),
     bg.border = layer_config$border_color,
@@ -214,14 +220,14 @@ draw_speed_track <- function(layer_config, config, is_first_layer = FALSE) {
     panel.fun = function(x, y) {
       # Draw speed zones first (background)
       draw_speed_zones(speeds, config)
-      
+
       # Draw tick marks
       draw_tick_marks(speeds, config)
-      
+
       # Draw speed labels
       circos.text(
         speeds,
-        rep(0.5, length(speeds)),
+        rep(label_y, length(speeds)),
         speeds,
         facing = config$text_params$facing,
         niceFacing = config$text_params$niceFacing,
@@ -338,7 +344,8 @@ draw_rpm_indicator <- function(current_rpm, config, indicator_params = INDICATOR
 
 #' Add machine specifications and legend
 #' @param config Global configuration object
-draw_machine_info <- function(config) {
+#' @param dial_params Dial visual parameters (defaults to DIAL_PARAMS)
+draw_machine_info <- function(config, dial_params = DIAL_PARAMS) {
   if (!config$show_machine_info) return()
 
   # Prepare legend text
@@ -366,14 +373,18 @@ draw_machine_info <- function(config) {
     )
   }
 
-  # Draw legend
+  # Build font weight vector for legend
+  base_fonts <- c(dial_params$title_font_weight, 1, 1, dial_params$title_font_weight)
+  layer_fonts <- rep(1, length(config$speed_layers))
+  zone_fonts <- if (config$show_speed_zones && !is.null(config$current_material)) c(1, 1) else c()
+
+  # Draw legend (using configurable position and size)
   legend(
-    "topright",
+    dial_params$legend_position,
     legend = legend_text,
     bty = "n",
-    cex = 0.75,
-    text.font = c(2, 1, 1, 2, rep(1, length(config$speed_layers) +
-                   ifelse(config$show_speed_zones && !is.null(config$current_material), 2, 0)))
+    cex = dial_params$legend_cex,
+    text.font = c(base_fonts, layer_fonts, zone_fonts)
   )
 }
 

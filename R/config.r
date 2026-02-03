@@ -128,6 +128,68 @@ SEGMENT_PARAMS <- list(
 )
 
 # ============================================================================
+# DIAL VISUAL PARAMETERS
+# ============================================================================
+
+DIAL_PARAMS <- list(
+  # Speed sequence generation
+  num_speed_steps = 10,
+
+  # Canvas limits for each layer (innermost to outermost)
+  canvas_limits = c(1.0, 1.16, 1.4, 1.75),
+
+  # Track Y positions (in circos 0-1 coordinate space)
+  tick_y_position = 0.5,
+  label_y_position = 0.5,
+
+  # Legend styling
+  legend_cex = 0.75,
+  legend_position = "topright",
+
+  # Title font weight (1=normal, 2=bold)
+  title_font_weight = 2
+)
+
+# ============================================================================
+# BAR CHART PARAMETERS
+# ============================================================================
+
+BAR_PARAMS <- list(
+  # Default RPM range for bar display
+  default_min_rpm = 200,
+  default_max_rpm = 3500,
+
+  # Plot margins (bottom, left, top, right)
+  margins = c(3, 4, 2, 2),
+
+  # Axis settings
+  num_axis_labels = 5,
+  axis_ticks = c(0, 25, 50, 75, 100),
+
+  # Value label positioning
+  value_label_x = 0.7,
+  value_label_y_offset = 5,
+  value_label_cex = 1.5,
+  value_label_font = 2
+)
+
+# ============================================================================
+# DISPLAY LAYOUT PARAMETERS
+# ============================================================================
+
+LAYOUT_PARAMS <- list(
+  # Digital display margins (bottom, left, top, right)
+  digital_margins = c(1, 1, 2, 1),
+
+  # Dashboard layout
+  dashboard_rows = 1,
+  dashboard_cols = 2,
+
+  # Title settings
+  title_font = 2
+)
+
+# ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 

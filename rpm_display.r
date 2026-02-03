@@ -170,9 +170,11 @@ draw_rpm_value <- function(rpm, config = DISPLAY_CONFIG, segment_params = SEGMEN
 #' @param active_pulley Active pulley index (1-4)
 #' @param config Display configuration
 #' @param segment_params Segment display parameters (defaults to SEGMENT_PARAMS)
+#' @param layout_params Layout parameters (defaults to LAYOUT_PARAMS)
 render_digital_display <- function(current_rpm, active_pulley = 1,
                                    config = DISPLAY_CONFIG,
-                                   segment_params = SEGMENT_PARAMS) {
+                                   segment_params = SEGMENT_PARAMS,
+                                   layout_params = LAYOUT_PARAMS) {
   # Validate inputs
   validate_rpm(current_rpm)
   validate_pulley_index(active_pulley)
@@ -182,8 +184,8 @@ render_digital_display <- function(current_rpm, active_pulley = 1,
                                            "pulley_label_y", "pulley_label_cex"),
                          "segment params")
 
-  # Set up plot
-  par(bg = config$bg_color, mar = c(1, 1, 2, 1))
+  # Set up plot (using configurable margins)
+  par(bg = config$bg_color, mar = layout_params$digital_margins)
   plot(
     NULL,
     xlim = c(-config$width/2, config$width/2),
@@ -214,17 +216,22 @@ render_digital_display <- function(current_rpm, active_pulley = 1,
     cex = segment_params$pulley_label_cex
   )
 
-  # Draw title
-  title(main = "SPINDLE SPEED", col.main = config$label_color, font.main = 2)
+  # Draw title (using configurable font)
+  title(main = "SPINDLE SPEED", col.main = config$label_color,
+        font.main = layout_params$title_font)
 }
 
 #' Display RPM bar graph showing current position in range
 #' @param current_rpm Current RPM value
-#' @param min_rpm Minimum RPM for scale
-#' @param max_rpm Maximum RPM for scale
+#' @param min_rpm Minimum RPM for scale (defaults to BAR_PARAMS$default_min_rpm)
+#' @param max_rpm Maximum RPM for scale (defaults to BAR_PARAMS$default_max_rpm)
 #' @param config Display configuration
-render_rpm_bar <- function(current_rpm, min_rpm = 200, max_rpm = 3500,
-                           config = DISPLAY_CONFIG) {
+#' @param bar_params Bar chart parameters (defaults to BAR_PARAMS)
+render_rpm_bar <- function(current_rpm,
+                           min_rpm = BAR_PARAMS$default_min_rpm,
+                           max_rpm = BAR_PARAMS$default_max_rpm,
+                           config = DISPLAY_CONFIG,
+                           bar_params = BAR_PARAMS) {
   # Validate inputs
   validate_rpm(current_rpm)
   validate_positive_number(min_rpm, "min_rpm", allow_zero = TRUE)
@@ -234,7 +241,7 @@ render_rpm_bar <- function(current_rpm, min_rpm = 200, max_rpm = 3500,
   }
   validate_config_fields(config, c("bg_color", "label_color"), "display config")
 
-  par(bg = config$bg_color, mar = c(3, 4, 2, 2))
+  par(bg = config$bg_color, mar = bar_params$margins)
 
   # Calculate percentage (using clamp utility)
   pct <- (current_rpm - min_rpm) / (max_rpm - min_rpm)
@@ -254,14 +261,18 @@ render_rpm_bar <- function(current_rpm, min_rpm = 200, max_rpm = 3500,
     axes = FALSE
   )
 
-  # Add scale
-  axis(2, at = c(0, 25, 50, 75, 100),
-       labels = round(seq(min_rpm, max_rpm, length.out = 5)),
+  # Add scale (using configurable axis settings)
+  axis(2, at = bar_params$axis_ticks,
+       labels = round(seq(min_rpm, max_rpm, length.out = bar_params$num_axis_labels)),
        col = config$label_color, col.axis = config$label_color)
 
-  # Add current value label
-  text(0.7, pct * 100 + 5, paste0(current_rpm, " RPM"),
-       col = config$label_color, cex = 1.5, font = 2)
+  # Add current value label (using configurable position and styling)
+  text(bar_params$value_label_x,
+       pct * 100 + bar_params$value_label_y_offset,
+       paste0(current_rpm, " RPM"),
+       col = config$label_color,
+       cex = bar_params$value_label_cex,
+       font = bar_params$value_label_font)
 
   title(main = "RPM Level", col.main = config$label_color)
 }
@@ -269,13 +280,15 @@ render_rpm_bar <- function(current_rpm, min_rpm = 200, max_rpm = 3500,
 #' Create combined dashboard with dial reference and digital display
 #' @param current_rpm Current RPM to display
 #' @param active_pulley Active pulley (1-4)
-render_rpm_dashboard <- function(current_rpm, active_pulley = 1) {
+#' @param layout_params Layout parameters (defaults to LAYOUT_PARAMS)
+render_rpm_dashboard <- function(current_rpm, active_pulley = 1,
+                                 layout_params = LAYOUT_PARAMS) {
   # Validate inputs (detailed validation happens in sub-functions)
   validate_rpm(current_rpm)
   validate_pulley_index(active_pulley)
 
-  # Set up 2-panel layout
-  par(mfrow = c(1, 2))
+  # Set up multi-panel layout (using configurable dimensions)
+  par(mfrow = c(layout_params$dashboard_rows, layout_params$dashboard_cols))
 
   # Panel 1: Digital display
   render_digital_display(current_rpm, active_pulley)
