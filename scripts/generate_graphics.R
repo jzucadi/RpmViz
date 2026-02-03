@@ -6,10 +6,11 @@
 # Load required packages
 library(circlize)
 
-# Source the package files
-source("R/config.r")
-source("circlize.r")
-source("rpm_display.r")
+# Source the package files (all now in R/ directory)
+# aaa_config.r loads first alphabetically to define config objects
+source("R/aaa_config.r")
+source("R/circlize.r")
+source("R/rpm_display.r")
 
 # Create output directory if it doesn't exist
 if (!dir.exists("images")) {

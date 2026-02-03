@@ -3,10 +3,7 @@
 # Uses circlize package for industrial-style RPM dial display
 # ============================================================================
 
-library(circlize)
-
-# Load shared configuration
-source("R/config.r")
+# Note: circlize is imported via NAMESPACE, aaa_config.r is loaded automatically by R
 
 # ============================================================================
 # LOCAL REFERENCES (from shared config)
@@ -394,6 +391,7 @@ draw_machine_info <- function(config, dial_params = DIAL_PARAMS) {
 
 #' Render complete dial with all speed tracks and enhancements
 #' @param config Configuration object containing all parameters
+#' @export
 render_dial <- function(config) {
   # Validate config object
   if (is.null(config) || !is.list(config)) {
@@ -443,6 +441,7 @@ render_dial <- function(config) {
 #' @param active_layer New active pulley layer 1-4 (optional)
 #' @param current_material New material type for optimal zone (optional)
 #' @return New config object with updated values
+#' @export
 update_config <- function(config,
                           current_speed = NULL,
                           active_layer = NULL,
@@ -490,6 +489,7 @@ update_config <- function(config,
 #' @param new_pulley Optional: new active pulley layer (1-4)
 #' @param new_material Optional: new material type for optimal zone
 #' @return Updated configuration object
+#' @export
 update_and_render <- function(config, new_rpm, new_pulley = NULL, new_material = NULL) {
   updated_config <- update_config(
     config,

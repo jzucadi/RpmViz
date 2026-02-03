@@ -3,11 +3,7 @@
 # Complementary to circlize.r speed dial - displays actual RPM values
 # ============================================================================
 
-library(circlize)
-
-# Load shared configuration (provides MACHINE_CONFIG, COLOR_SCHEME,
-# calculate_rpm, calculate_all_rpms, get_rpm_color, etc.)
-source("R/config.r")
+# Note: circlize is imported via NAMESPACE, aaa_config.r is loaded automatically by R
 
 # ============================================================================
 # LOCAL REFERENCES (from shared config for backward compatibility)
@@ -17,7 +13,7 @@ spindle_pulley_diameters <- MACHINE_CONFIG$spindle_pulley_diameters
 motor_pulley_diameter <- MACHINE_CONFIG$motor_pulley_diameter
 motor_rpm <- MACHINE_CONFIG$motor_rpm
 
-# Note: calculate_rpm() and calculate_all_rpms() are now provided by R/config.r
+# Note: calculate_rpm() and calculate_all_rpms() are now provided by R/aaa_config.r
 
 # ============================================================================
 # DIGITAL DISPLAY CONFIGURATION
@@ -171,6 +167,7 @@ draw_rpm_value <- function(rpm, config = DISPLAY_CONFIG, segment_params = SEGMEN
 #' @param config Display configuration
 #' @param segment_params Segment display parameters (defaults to SEGMENT_PARAMS)
 #' @param layout_params Layout parameters (defaults to LAYOUT_PARAMS)
+#' @export
 render_digital_display <- function(current_rpm, active_pulley = 1,
                                    config = DISPLAY_CONFIG,
                                    segment_params = SEGMENT_PARAMS,
@@ -227,6 +224,7 @@ render_digital_display <- function(current_rpm, active_pulley = 1,
 #' @param max_rpm Maximum RPM for scale (defaults to BAR_PARAMS$default_max_rpm)
 #' @param config Display configuration
 #' @param bar_params Bar chart parameters (defaults to BAR_PARAMS)
+#' @export
 render_rpm_bar <- function(current_rpm,
                            min_rpm = BAR_PARAMS$default_min_rpm,
                            max_rpm = BAR_PARAMS$default_max_rpm,
@@ -281,6 +279,7 @@ render_rpm_bar <- function(current_rpm,
 #' @param current_rpm Current RPM to display
 #' @param active_pulley Active pulley (1-4)
 #' @param layout_params Layout parameters (defaults to LAYOUT_PARAMS)
+#' @export
 render_rpm_dashboard <- function(current_rpm, active_pulley = 1,
                                  layout_params = LAYOUT_PARAMS) {
   # Validate inputs (detailed validation happens in sub-functions)
