@@ -11,7 +11,7 @@ on:
   workflow_dispatch:  # Allow manual triggering
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   # ===========================================================================
@@ -311,3 +311,54 @@ jobs:
 
           cat("\nAll smoke tests passed!\n")
         shell: Rscript {0}
+
+  # ===========================================================================
+  # GENERATE GRAPHICS - Create and commit visualization images
+  # ===========================================================================
+  generate-graphics:
+    runs-on: ubuntu-latest
+    name: Generate Graphics
+    # Only run on push to main, not on PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
+
+      - name: Install R dependencies
+        run: |
+          install.packages(c("circlize", "grDevices"))
+        shell: Rscript {0}
+
+      - name: Generate graphics
+        run: |
+          source("scripts/generate_graphics.R")
+        shell: Rscript {0}
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [ -n "$(git status images/ --porcelain)" ]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push graphics
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add images/
+          git commit -m "Update generated graphics [skip ci]"
+          git push
