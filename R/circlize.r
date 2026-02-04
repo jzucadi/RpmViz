@@ -40,7 +40,7 @@ CONFIG <- list(
   # Visual parameters
   font_size = 15,
   scale_height = (dial_outer_edge_dia_in - dial_diameter_in) / length(spindle_pulley_diameters),
-  gap_after = stop_angle - start_angle,
+  gap_after = 0,  # Gap between sectors (0 for full circle)
   cell_padding = c(0.00, 1.00, 0.00, 1.00),
   center_mark_length = 0.1,
   center_mark_color = COLOR_SCHEME$center_mark_color,
