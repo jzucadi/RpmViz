@@ -519,10 +519,14 @@ validate_rpm <- function(rpm, max_rpm = 10000) {
   if (is.null(rpm)) {
     stop("RPM value cannot be NULL")
   }
+  # Check for NA/NaN early (before numeric check, since is.numeric(NA) is FALSE)
+  if (length(rpm) == 1 && (isTRUE(is.na(rpm)) || isTRUE(is.nan(rpm)))) {
+    stop(paste("RPM must be a finite number, got:", rpm))
+  }
   if (!is.numeric(rpm) || length(rpm) != 1) {
     stop("RPM must be a single numeric value")
   }
-  if (is.na(rpm) || is.nan(rpm) || is.infinite(rpm)) {
+  if (is.infinite(rpm)) {
     stop(paste("RPM must be a finite number, got:", rpm))
   }
   if (rpm < 0) {

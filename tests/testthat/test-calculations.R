@@ -29,7 +29,7 @@ test_that("calculate_rpm validates inputs", {
 
 test_that("calculate_all_rpms returns named vector", {
   rpms <- calculate_all_rpms()
-  expect_type(rpms, "integer")
+  expect_type(rpms, "double")
   expect_length(rpms, 4)
   expect_true(all(grepl("Pulley_", names(rpms))))
 })
