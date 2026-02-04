@@ -133,7 +133,7 @@ jobs:
       - name: Setup R dependencies
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::covr, any::devtools
+          extra-packages: any::covr, any::devtools, any::DT, any::htmltools
           needs: coverage
 
       - name: Generate coverage report
