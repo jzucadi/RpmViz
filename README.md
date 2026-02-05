@@ -1,4 +1,4 @@
-# rpmviz
+# RPM Viz
 
 An R package for creating industrial-style RPM visualizations using the circlize package. Provides both analog dial and digital display representations for spindle speed monitoring.
 
