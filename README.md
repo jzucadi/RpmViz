@@ -1,161 +1,205 @@
-# Circlize Package Prototype
+# rpmviz
 
-A collection of R scripts for creating industrial-style RPM visualizations using the circlize package.  This project provides both analog dial and digital display representations for spindle speed monitoring.
+An R package for creating industrial-style RPM visualizations using the circlize package. Provides both analog dial and digital display representations for spindle speed monitoring.
 
+[![R Package CI](https://github.com/jzucadi/RpmViz/actions/workflows/r.yml/badge.svg)](https://github.com/jzucadi/RpmViz/actions/workflows/r.yml)
 
-<img width="377" height="355" alt="Screenshot 2025-12-17 at 4 38 49 PM" src="https://github.com/user-attachments/assets/3401ea57-bd63-4f3a-bb96-2be14b496160" /><img width="377" height="355" alt="Screenshot 2025-12-17 at 4 35 47 PM" src="https://github.com/user-attachments/assets/7c750f3f-144f-484b-8dfb-96762190582e" />
-
-
-
-
-
-## Overview
-
-### circlize.r - Circular Speed Dial Visualization
-
-Creates a circular "speed dial" style chart using the circlize package, ideal for visualizing where the current RPM falls within the available speed range. 
-
-### rpm_display.r - Digital RPM Display
-
-A complementary script that displays actual RPM values in a digital format.  While the circular dial shows where you are on the speed range, the digital display shows the exact numerical RPM value.
-
-#### Features
-
-| Feature | Description |
-|---------|-------------|
-| 7-Segment Digital Display | Renders RPM values in a classic digital readout style |
-| Color-Coded Warnings | Green (safe), Yellow (warning), Red (danger) based on RPM thresholds |
-| RPM Calculation | Automatically calculates actual spindle RPM from pulley ratios |
-| Bar Graph Indicator | Visual bar showing where current RPM falls in the available range |
-| Dashboard Mode | Combined view with both digital readout and bar indicator |
-
-#### Key Functions
-
-- `calculate_rpm()` - Computes actual spindle RPM based on motor speed and pulley diameters
-- `render_digital_display()` - Shows a 7-segment style digital RPM readout
-- `render_rpm_bar()` - Displays a vertical bar graph of the current RPM level
-- `render_rpm_dashboard()` - Combined view with both displays
-
-## Integration
-
-Both scripts share the same machine specifications (pulley diameters, motor RPM) and are designed to work together. Use the circular dial for an at-a-glance view of the speed range position, and the digital display for precise numerical readings.
-
-This R script creates a circular dial visualization that displays available spindle speeds (RPMs) across multiple pulley configurations. The chart mimics the appearance of traditional drill press speed charts, with concentric rings representing different belt-pulley combinations.
-
-Perfect for creating custom speed reference charts for your drill press control panel.
+<img width="377" height="355" alt="Screenshot 2025-12-17 at 4 38 49 PM" src="https://github.com/user-attachments/assets/3401ea57-bd63-4f3a-bb96-2be14b496160" /><img width="377" height="355" alt="Screenshot 2025-12-17 at 4 35 47 PM" src="https://github.com/user-attachments/assets/7c750f3f-144f-484b-8dfb-96762190582e" />
 
 ## Features
 
-- **Multi-layered circular design**: Each concentric ring represents speeds achievable with a specific spindle pulley diameter
-- **Color-coded tracks**: Different colors (light blue, yellow, red, purple) distinguish between pulley configurations
-- **Outward-facing labels**: RPM values are oriented for easy reading around the dial
-- **Center reference marks**: Visual guides for dial center and mounting hole placement
-- **Customizable dimensions**: Adjust dial size, font size, and track heights to match your specific drill press
+- **Circular Speed Dial**: Multi-layered dial visualization showing speeds across pulley configurations
+- **Digital 7-Segment Display**: Classic digital readout style RPM display
+- **Color-Coded Warnings**: Green (safe), Yellow (warning), Red (danger) based on RPM thresholds
+- **Material Speed Zones**: Optimal RPM ranges for wood, metal, and plastic
+- **RPM Calculations**: Automatic spindle RPM calculation from motor speed and pulley ratios
+- **Customizable Configuration**: Factory functions for creating custom machine configs
+- **Comprehensive Validation**: Input validation for all parameters
 
-## How It Works
-
-The script draws a dial with multiple concentric tracks, each representing a set of speeds (RPMs) achievable with different pulley combinations on your drill press. When you adjust the variable speed handle on a machine like the Powermatic 1200, you're changing the effective pulley ratio - this chart shows you what RPM you can expect at each setting.
-
-### Key Parameters
+## Installation
 
 ```r
-font_size <- 15 #pt
-scale_height <- (dial_outer_edge_dia_in - dial_diameter_in) / length(spindle_pulley_diameters)
-gap_after = stop_angle - start_angle
-cell_padding <- c(0.00, 1.00, 0.00, 1.00)
+# Install from GitHub
+devtools::install_github("jzucadi/RpmViz")
+
+# Or install from local source
+devtools::install_local("path/to/RpmViz")
 ```
 
-- **font_size**: Sets text size for speed labels
-- **scale_height**: Calculates the height of the circular tracks based on dial dimensions and the number of pulleys
-- **gap_after**: Determines the angular gap between tracks
-- **cell_padding**: Sets padding between circular cells (tracks)
+## Requirements
 
-## Visualization Structure
+- R (>= 3.6.0)
+- circlize package
 
-### Outermost Track (Highest Speeds)
+## Quick Start
 
 ```r
-circos.par(clock.wise = TRUE, start.degree = start_angle, gap.after = gap_after, cell.padding = cell_padding)
-circos.initialize(factors = "speeds1", xlim = c(min(speeds1), max(speeds1)))
-circos.track(
-  ylim = c(0, 1),
-  bg.border = "light blue",
-  track.height = convert_length(scale_height, "in")
+library(rpmviz)
+
+# Render the default speed dial
+render_dial(CONFIG)
+
+# Render with a specific RPM indicator
+dial_config <- update_config(CONFIG, current_speed = 1400, active_layer = 2)
+render_dial(dial_config)
+
+# Digital display
+render_digital_display(1500, active_pulley = 2)
+
+# Full dashboard with dial and bar
+render_rpm_dashboard(1800, active_pulley = 3)
+```
+
+## API Reference
+
+### Configuration Objects
+
+| Object | Description |
+|--------|-------------|
+| `MACHINE_CONFIG` | Machine specifications (motor RPM, pulley diameters, belt slip factor) |
+| `COLOR_SCHEME` | Colors for layers, safety thresholds, and material zones |
+| `MATERIAL_RANGES` | Optimal RPM ranges by material (wood, metal, plastic) |
+| `DIAL_PARAMS` | Dial display parameters (canvas limits, label positions) |
+| `BAR_PARAMS` | Bar graph display parameters |
+| `INDICATOR_PARAMS` | Arrow indicator settings |
+| `SEGMENT_PARAMS` | 7-segment digital display settings |
+| `LAYOUT_PARAMS` | Dashboard layout parameters |
+
+### Core Calculation Functions
+
+| Function | Description |
+|----------|-------------|
+| `calculate_rpm(motor_rpm, motor_dia, spindle_dia, belt_slip_factor)` | Calculate spindle RPM from pulley ratios |
+| `calculate_all_rpms(machine_config)` | Get RPMs for all pulley configurations |
+| `generate_speed_sequence(pulley_index, num_steps)` | Generate speed sequence for a pulley |
+
+### Visualization Functions
+
+| Function | Description |
+|----------|-------------|
+| `render_dial(config)` | Render circular speed dial |
+| `render_digital_display(rpm, active_pulley)` | Render 7-segment digital display |
+| `render_rpm_bar(rpm)` | Render vertical RPM bar graph |
+| `render_rpm_dashboard(rpm, active_pulley)` | Combined dashboard view |
+| `update_and_render(config, ...)` | Update config and render in one call |
+
+### Configuration Factory Functions
+
+| Function | Description |
+|----------|-------------|
+| `create_machine_config(...)` | Create custom machine configuration |
+| `create_color_scheme(...)` | Create custom color scheme |
+| `create_speed_layer(index, speeds, color, canvas_lim, pulley_dia)` | Create a speed layer for the dial |
+| `update_config(config, ...)` | Update specific config values |
+| `merge_config(base, updates)` | Merge two configurations |
+| `copy_config(config)` | Deep copy a configuration |
+
+### Utility Functions
+
+| Function | Description |
+|----------|-------------|
+| `get_rpm_color(rpm)` | Get color based on RPM (green/yellow/red) |
+| `validate_rpm(rpm)` | Validate RPM value |
+| `validate_pulley_index(index)` | Validate pulley index (1-4) |
+| `validate_material(material)` | Validate material name |
+| `color_with_alpha(color, alpha)` | Add transparency to a color |
+| `format_speed_range(range)` | Format speed range for display |
+| `clamp(value, min, max)` | Clamp value to range |
+
+## Examples
+
+### Custom Machine Configuration
+
+```r
+# Create config for a different machine
+my_machine <- create_machine_config(
+  motor_rpm = 1800,
+  motor_hp = 2.0,
+  motor_pulley_diameter = 2.5,
+  spindle_pulley_diameters = c(3.0, 4.0, 5.0, 6.0)
 )
-circos.text(speeds1, rep(0.5, length(speeds1)), speeds1, facing = "outside", niceFacing = TRUE, cex = fontsize(font_size), font = 2, family = "serif")
-circos.clear()
+
+# Calculate RPMs with custom config
+rpms <- calculate_all_rpms(my_machine)
+print(rpms)
 ```
 
-Initializes the circular plot with the outermost speed layer (speeds1), draws a track with a blue border, and places speed values outward around the ring.
-
-### Center Mark and Boundaries
+### Material Zone Highlighting
 
 ```r
-lines(x = c(-0.1, 0.1), y = c(0, 0), fg = "lightgray")
-lines(x = c(0, 0), y = c(-0.1, 0.1), fg = "lightgray")
-symbols(c(0, 0), c(0, 0), circles = c(dial_diameter_in / 2, mounting_hole_dia_in / 2), fg = "lightgray", add = TRUE)
-```
-
-Draws faint cross lines to mark the dial center and circles for the dial edge and mounting hole, helping visually anchor the dial.
-
-### Additional Tracks (Lower Speeds)
-
-For each subsequent speed layer (speeds2, speeds3, speeds4), the code:
-- Uses `par(new = TRUE)` to overlay new tracks on the same plot
-- Expands the canvas limits (xy_canvas_lim) to fit the next ring
-- Initializes and draws colored tracks using `circos.track`
-- Places the speed values around each ring
-
-**Example for Second Layer:**
-
-```r
-xy_canvas_lim <- 1.16
-circos.par(canvas.xlim = c(-xy_canvas_lim, xy_canvas_lim), ...)
-circos.initialize(factors = "speeds2", xlim = c(min(speeds2), max(speeds2)))
-circos.track(
-  ylim = c(0, 1),
-  bg.border = "yellow",
-  ...,
-  panel.fun = function(x, y) {
-    circos.text(speeds2, rep(0.5, length(speeds2)), speeds2, facing = "outside", ...)
-  }
+# Show optimal zone for metal work
+metal_config <- update_config(CONFIG,
+  current_speed = 600,
+  active_layer = 1,
+  current_material = "metal"
 )
-circos.clear()
+render_dial(metal_config)
 ```
 
-Yellow, red, and purple borders are used for layers 2–4, respectively.
+### Generating Graphics Files
+
+```r
+# Save dial to PNG
+png("speed_dial.png", width = 800, height = 800, res = 120)
+render_dial(CONFIG)
+dev.off()
+
+# Save dashboard
+png("dashboard.png", width = 1000, height = 400, res = 120)
+render_rpm_dashboard(1800, active_pulley = 3)
+dev.off()
+```
 
 ## Use Case: Powermatic 1200 Drill Press
 
-The Powermatic 1200 features a variable speed handle that allows the operator to change spindle speeds without stopping the machine. This chart helps you:
+The default configuration is based on the Powermatic 1200 drill press with a variable speed mechanism. The dial helps you:
 
 1. **Quickly reference available speeds** for different pulley positions
 2. **Optimize drilling operations** by selecting the correct RPM for your material and bit size
 3. **Create a professional speed chart** that can be mounted directly on your drill press
 
-Simply adjust your pulley belt position and use the variable speed handle to dial in the exact RPM shown on the corresponding ring.
+## Development
 
-## Requirements
-
-- R (version 3.6+)
-- `circlize` package
-
-## Installation
+### Running Tests
 
 ```r
-install.packages("circlize")
+# Run all tests
+devtools::test()
+
+# Run with coverage
+covr::package_coverage()
 ```
 
-## Usage
+### Project Structure
 
-```r
-source("circlize. r")
-source("rpm_display. r")
 ```
+rpmviz/
+├── R/
+│   ├── aaa_config.r    # Configuration objects and factory functions
+│   ├── circlize.r      # Circular dial visualization
+│   └── rpm_display.r   # Digital display and bar graph
+├── tests/
+│   └── testthat/       # Unit tests (157+ tests)
+├── scripts/
+│   └── generate_graphics.R  # Generate sample images
+├── DESCRIPTION
+├── NAMESPACE
+└── LICENSE
+```
+
+### CI/CD
+
+The package includes GitHub Actions workflows for:
+- R CMD check on multiple platforms (Ubuntu, macOS, Windows)
+- Multiple R versions (release, devel, oldrel)
+- Unit testing with testthat
+- Code coverage reporting
+- Linting with lintr
+- Automatic graphics generation
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE) - it's free and open source software.  You are free to use, modify, and distribute this project for any purpose, including commercial use. 
+This project is licensed under the [MIT License](LICENSE).
 
 ## Contributing
 
