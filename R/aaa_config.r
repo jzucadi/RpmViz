@@ -82,7 +82,7 @@ COLOR_SCHEME <- list(
 
   # RPM safety thresholds and colors
   safe_color = "green",
-  warning_color = "yellow",
+  warning_color = "orange",
   danger_color = "red",
 
   # Threshold values (RPM)
@@ -269,7 +269,7 @@ LAYOUT_PARAMS <- list(
 #' @export
 #' @examples
 #' get_rpm_color(1000)  # Returns safe color (green)
-#' get_rpm_color(3200)  # Returns warning color (yellow)
+#' get_rpm_color(3200)  # Returns warning color (orange)
 #' get_rpm_color(4000)  # Returns danger color (red)
 get_rpm_color <- function(rpm, colors = COLOR_SCHEME) {
   if (rpm > colors$max_warning_rpm) {
