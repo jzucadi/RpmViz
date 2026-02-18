@@ -201,6 +201,3 @@ The package includes GitHub Actions workflows for:
 
 This project is licensed under the [MIT License](LICENSE).
 
-## Contributing
-
-Contributions welcome! Feel free to submit issues or pull requests.
